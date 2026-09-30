@@ -1,0 +1,55 @@
+--- a/src/shell/bar/bar.cpp
++++ b/src/shell/bar/bar.cpp
+@@ -3177,23 +3177,28 @@
+-  if (instance.bg == nullptr) {
+-    return;
+-  }
+-  float absX = 0.0F;
+-  float absY = 0.0F;
+-  Node::absolutePosition(instance.bg, absX, absY);
+-  const int px = static_cast<int>(std::lround(absX));
+-  const int py = static_cast<int>(std::lround(absY));
+-  const int pw = static_cast<int>(std::lround(std::max(0.0F, instance.bg->width())));
+-  const int ph = static_cast<int>(std::lround(std::max(0.0F, instance.bg->height())));
+-  const auto concave = barConcaveShape(instance.barConfig);
+-  // The bg node is the visual rect; tessellateShape expects the body rect and
+-  // expands it outward by logicalInset itself. With all-convex corners and no
+-  // inset it takes its own fast path down to a plain rounded rect.
+-  const int insetL = static_cast<int>(std::lround(concave.logicalInset.left));
+-  const int insetT = static_cast<int>(std::lround(concave.logicalInset.top));
+-  const int insetR = static_cast<int>(std::lround(concave.logicalInset.right));
+-  const int insetB = static_cast<int>(std::lround(concave.logicalInset.bottom));
+-  auto blurStrips = Surface::tessellateShape(
+-      px + insetL, py + insetT, pw - insetL - insetR, ph - insetT - insetB, concave.corners, concave.logicalInset,
+-      concave.radii
+-  );
+-  instance.surface->setBlurRegion(blurStrips);
++  std::vector<InputRect> blurRegions;
++  const auto appendCapsuleRegions = [&blurRegions](const std::vector<BarCapsuleRun>& runs) {
++    for (const auto& run : runs) {
++      if (!run.hasPaintedCapsuleBackground || run.bg == nullptr || !run.bg->visible()) {
++        continue;
++      }
++      float absX = 0.0F;
++      float absY = 0.0F;
++      Node::absolutePosition(run.bg, absX, absY);
++      const int x = static_cast<int>(std::lround(absX));
++      const int y = static_cast<int>(std::lround(absY));
++      const int width = static_cast<int>(std::lround(std::max(0.0F, run.bg->width())));
++      const int height = static_cast<int>(std::lround(std::max(0.0F, run.bg->height())));
++      const auto style = run.bg->style();
++      auto regions = Surface::tessellateShape(
++          x, y, width, height, style.corners, style.logicalInset, style.radius
++      );
++      blurRegions.insert(blurRegions.end(), regions.begin(), regions.end());
++    }
++  };
++  appendCapsuleRegions(instance.startCapsuleRuns);
++  appendCapsuleRegions(instance.centerCapsuleRuns);
++  appendCapsuleRegions(instance.endCapsuleRuns);
++  if (blurRegions.empty()) {
++    instance.surface->clearBlurRegion();
++  } else {
++    instance.surface->setBlurRegion(blurRegions);
++  }
+ }
