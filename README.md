@@ -10,7 +10,11 @@
 
 *A dark cosmic / cyberpunk daily-driver rice on NixOS featuring the Niri scroll-compositor and Noctalia shell, inspired by the Nullscapes aesthetic.*
 
-**[Reddit Showcase on r/unixporn](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)**
+<br/>
+
+[![Spike Dotfiles Showcase Preview](assets/showcase.webp)](assets/showcase.mp4)
+
+<sub>✨ *Click the preview above to watch the full 2-minute video with audio, or view the [Reddit Discussion](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)* ✨</sub>
 
 </div>
 
@@ -27,6 +31,31 @@
 
 ---
 
+## 📸 Screenshots Gallery
+
+<details open>
+<summary><b>Click to expand / collapse screenshots</b></summary>
+<br/>
+
+| Clean Desktop (Wallpaper & Noctalia Bar) | Noctalia Control Center & Sliders |
+| :---: | :---: |
+| [![Clean Desktop](assets/screenshots/01_desktop.png)](assets/screenshots/01_desktop.png) | [![Control Center](assets/screenshots/02_control_center.png)](assets/screenshots/02_control_center.png) |
+
+| Ghostty & Fastfetch | Cava Audio Visualizer & Btop |
+| :---: | :---: |
+| [![Terminal & Fastfetch](assets/screenshots/03_terminal.png)](assets/screenshots/03_terminal.png) | [![Cava & Btop](assets/screenshots/04_cava_btop.png)](assets/screenshots/04_cava_btop.png) |
+
+<div align="center">
+
+### Noctalia App Launcher
+[![App Launcher](assets/screenshots/05_launcher.png)](assets/screenshots/05_launcher.png)
+
+</div>
+
+</details>
+
+---
+
 ## 🎨 Aesthetic & Rice Overview
 
 | Component | Software / Details |
@@ -37,7 +66,7 @@
 | **Terminal** | [Ghostty](https://ghostty.org/) (Nullscapes deep cosmic palette) |
 | **Shell** | [Fish](https://fishshell.com/) + [Starship](https://starship.rs/) prompt |
 | **Fetch** | [Fastfetch](https://github.com/fastfetch-cli/fastfetch) with bundled art (`assets/fastfetch/Easy.png`) |
-| **Launcher** | [Fuzzel](https://codeberg.org/dnkl/fuzzel) |
+| **Launcher** | [Fuzzel](https://codeberg.org/dnkl/fuzzel) & Noctalia App Launcher |
 | **Screenshots** | [Satty](https://github.com/gabm/Satty) with instant screen freeze via Noctalia screencopy |
 | **Display Manager** | SDDM with [Astronaut theme](https://github.com/keyitdev/sddm-astronaut-theme) (Black Hole preset) |
 | **Bootloader** | GRUB with [HyperFluent theme](https://github.com/Coopydood/HyperFluent-GRUB-Theme) |
@@ -82,7 +111,10 @@ The live animated wallpaper shown in the showcase video is from **Wallpaper Engi
 Spike-dotfiles/
 ├── assets/
 │   ├── fastfetch/Easy.png      # Fastfetch anime art logo
-│   └── wallpapers/nullscapes.png # High-res static wallpaper
+│   ├── screenshots/            # Showcase screenshots
+│   ├── wallpapers/nullscapes.png # High-res static wallpaper
+│   ├── showcase.webp           # Looping animated preview
+│   └── showcase.mp4            # Full 2-minute showcase video
 ├── patches/
 │   └── noctalia-bar-capsule-blur.patch # C++ patch for rounded capsule blur in Noctalia
 ├── configuration.nix           # System-level NixOS configuration
