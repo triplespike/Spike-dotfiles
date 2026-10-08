@@ -933,7 +933,7 @@ in
           draw-border-with-background false
       }
 
-      // Geometry Dash и игры Steam: Direct Scanout, нулевой инпут-лаг, без скруглений и теней
+      // Fullscreen games & performance-critical apps: direct scanout with zero compositor overhead
       window-rule {
           match app-id=r#"(?i).*(steam_app_|geometrydash).*"#
           open-fullscreen true

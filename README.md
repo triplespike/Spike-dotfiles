@@ -37,15 +37,13 @@
 
 ---
 
-## ✨ Key Highlights & Features
+## ✨ Highlights
 
-* ⚡ **Zero-Latency Direct-Scanout for Gaming:** Custom Niri window rules targeting Steam games and Geometry Dash (`steam_app_*`, `geometrydash`). Automatically disables rounded borders, disables shadows, and enables uninhibited fullscreen direct scanout for zero compositor input delay.
-* 🌀 **Niri Infinite Horizontal Canvas:** Smooth, physics-based horizontal scrolling tiling compositor. Window widths adjust dynamically with hotkeys (`Mod+R`), keeping your active workspace uncluttered.
-* 💊 **Native C++ Capsule Blur Patch:** Includes a dedicated nixpkgs `overrideAttrs` patch ([`patches/noctalia-bar-capsule-blur.patch`](patches/noctalia-bar-capsule-blur.patch)) for Noctalia shell, injecting native capsule background blur into the bar.
-* 🌌 **Live Animated Wallpaper (W-Engine):** Seamless integration with Wallpaper Engine (`linux-wallpaperengine` running *Nullscapes - No Text* by Kiba) tuned for 30 FPS at minimal CPU/RAM footprint (~360MB).
-* 🛡️ **NVIDIA Wayland Stability Rules:** Declarative NVIDIA buffer pool limit configuration (`50-limit-free-buffer-pool-in-wayland-compositors.json`) eliminating stutter and frame drops on proprietary NVIDIA drivers.
-* 🎵 **Cohesive Audio & Spicetify:** PipeWire + WirePlumber software mixer volume curve paired with Spotify customized via Spicetify in a matching Catppuccin / Tokyo Night dark palette.
-* ❄️ **100% Declarative Flake Architecture:** Reproducible, immutable system and user environment managed via Nix Flakes and Home Manager with atomic rollbacks.
+* **Scrollable Tiling:** Fluid infinite horizontal canvas with dynamic column resizing via [Niri](https://github.com/YaLTeR/niri).
+* **Direct Scanout Pipeline:** Tailored window rules for fullscreen applications to enable uninhibited direct scanout with zero compositor overhead.
+* **Capsule Blur Patch:** Native C++ blur patch for the [Noctalia](https://github.com/noctalia-dev/noctalia) shell bar applied declaratively via `overrideAttrs`.
+* **NVIDIA Wayland Stability:** Configured driver buffer limits eliminating stutter and frame pacing issues.
+* **Declarative Flake:** Fully reproducible NixOS + Home Manager setup with atomic rollbacks.
 
 ---
 
