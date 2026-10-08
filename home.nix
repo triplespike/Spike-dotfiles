@@ -48,7 +48,14 @@ in
       peaclock
       pipes-rs
       psmisc
-      python3
+      gcc
+      mpvpaper
+      socat
+      (python3.withPackages (ps: with ps; [
+        numpy
+        onnxruntime
+        pillow
+      ]))
       wget
       wf-recorder
 
@@ -924,6 +931,17 @@ in
           geometry-corner-radius 16
           clip-to-geometry true
           draw-border-with-background false
+      }
+
+      // Geometry Dash и игры Steam: Direct Scanout, нулевой инпут-лаг, без скруглений и теней
+      window-rule {
+          match app-id=r#"(?i).*(steam_app_|geometrydash).*"#
+          open-fullscreen true
+          geometry-corner-radius 0
+          clip-to-geometry false
+          shadow {
+              off
+          }
       }
 
       // Ghostty: ровно 50% экрана (0.5), чтобы идеально вставать рядом с браузером без скролла
