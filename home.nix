@@ -666,6 +666,7 @@ in
         sub-color = "#E8EDFF";
         sub-border-color = "#080B16";
         sub-border-size = 2.5;
+        "autofit-larger" = "80%x85%";
       };
       scriptOpts = {
         uosc = {
@@ -996,7 +997,6 @@ in
       window-rule {
           match app-id="(?i).*mpv.*"
           open-floating true
-          default-column-width { proportion 0.65; }
           geometry-corner-radius 16
           clip-to-geometry true
       }
