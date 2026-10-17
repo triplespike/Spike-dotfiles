@@ -98,6 +98,7 @@ in
       XCURSOR_THEME = "catppuccin-mocha-dark-cursors";
       XCURSOR_SIZE = "20";
       MOZ_ENABLE_WAYLAND = "1";
+      NH_FLAKE = "/etc/nixos";
     };
 
     file = {
@@ -318,7 +319,7 @@ in
         pls = "sudo";
         cat = "bat --paging=never";
       };
-      shellAbbrs.upp = "pls nixos-rebuild switch --flake /etc/nixos#nixos";
+      shellAbbrs.upp = "nh os switch";
       plugins = [
         {
           name = "done";
@@ -385,6 +386,12 @@ in
         selection-background = "#344879";
         selection-foreground = "#FFFFFF";
         command = "fish";
+        keybind = [
+          "shift+insert=paste_from_clipboard"
+          "ctrl+v=paste_from_clipboard"
+        ];
+        clipboard-read = "allow";
+        clipboard-paste-protection = false;
       };
     };
 
