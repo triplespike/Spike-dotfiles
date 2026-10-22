@@ -1,5 +1,5 @@
 # Hardware-specific scan (generate your own using nixos-generate-config)
-hardware-configuration.nix
+/hardware-configuration.nix
 
 # Nix build results & direnv
 result
