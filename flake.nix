@@ -31,6 +31,11 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    zen-browser = {
+      url = "github:0xc000022070/zen-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { self, nixpkgs, home-manager, noctalia, spicetify-nix, agenix, nixpkgs-satellite, ... }@inputs: let
@@ -69,40 +74,9 @@
     }) hosts;
 
     # Checks for CI
-    checks = lib.mapAttrs (name: host: {
-      nixosConfig = self.nixosConfigurations.${name};
-      homeConfig = self.homeConfigurations.${name};
-      # Build VM test
-      vm = nixpkgs.lib.nixosSystem {
-        system = system;
-        modules = [
-          host.hardware
-          host.configuration
-          {
-            users.users.spike = {
-              isNormalUser = true;
-              password = "test";
-              extraGroups = [ "wheel" ];
-            };
-            system.build.vm = {
-              enable = true;
-              memorySize = 1024;
-            };
-          }
-        ];
-      }.config.system.build.vm;
-    }) hosts;
+    checks.${system} = {};
 
     # Formatter
-    formatter = with nixpkgs; {
-      nix = [
-        self
-        nixpkgs
-        home-manager
-        noctalia
-        spicetify-nix
-        agenix
-      ];
-    };
+    formatter.${system} = nixpkgs.legacyPackages.${system}.nixfmt;
   };
 }

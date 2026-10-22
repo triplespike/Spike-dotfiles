@@ -684,14 +684,14 @@ in
           { type = "shell"; key = "│ 󰞷  Оболочка   "; keyColor = "bright_magenta"; }
           { type = "display"; key = "│ 󰍹  Монитор    "; keyColor = "bright_magenta"; }
           { type = "custom"; format = "${esc}[38;2;171;102;204m╰───────────────────────────────────────────────────${esc}[0m"; }
-          { type = "custom"; format = "${esc}[38;2;121;185;181m╭─   Аппаратная часть ─────────────────────────────${esc}[0m"; }
+          { type = "custom"; format = "${esc}[38;2;125;207;255m╭─   Аппаратная часть ─────────────────────────────${esc}[0m"; }
           { type = "cpu"; key = "│   Процессор  "; keyColor = "bright_cyan"; }
           { type = "gpu"; key = "│ 󰢮  Видеокарта "; keyColor = "bright_cyan"; format = "{1} {2}"; }
           { type = "memory"; key = "│ 󰘚  Память ОЗУ "; keyColor = "bright_cyan"; }
           { type = "disk"; key = "│ 󰋊  NVMe (Root)"; folders = "/"; keyColor = "bright_cyan"; }
           { type = "disk"; key = "│ 󰋊  HDD (Игры) "; folders = "/mnt/storage"; keyColor = "bright_cyan"; }
           { type = "disk"; key = "│ 󰋊  SSD игровой"; folders = "/mnt/ssd"; keyColor = "bright_cyan"; }
-          { type = "custom"; format = "${esc}[38;2;121;185;181m╰───────────────────────────────────────────────────${esc}[0m"; }
+          { type = "custom"; format = "${esc}[38;2;125;207;255m╰───────────────────────────────────────────────────${esc}[0m"; }
           { type = "colors"; symbol = "circle"; paddingLeft = 2; }
         ];
       };
@@ -742,6 +742,27 @@ in
       ];
       interactiveShellInit = ''
         set -g fish_greeting ""
+
+        # Подсветка синтаксиса Fish в космическом стиле Nullscapes
+        set -g fish_color_normal E8EDFF
+        set -g fish_color_command 678FE4 --bold
+        set -g fish_color_keyword AB66CC --bold
+        set -g fish_color_quote 7DCFFF
+        set -g fish_color_redirection E8EDFF
+        set -g fish_color_end AB66CC
+        set -g fish_color_error FD4663 --bold
+        set -g fish_color_param E8EDFF
+        set -g fish_color_comment 46516F
+        set -g fish_color_selection --background=344879
+        set -g fish_color_search_match --background=344879
+        set -g fish_color_operator AB66CC
+        set -g fish_color_escape 7DCFFF
+        set -g fish_color_autosuggestion 46516F
+        set -g fish_color_cwd 678FE4
+        set -g fish_color_user 678FE4
+        set -g fish_color_host AB66CC
+        set -g fish_color_cancel FD4663
+
         fastfetch
       '';
     };
@@ -788,10 +809,10 @@ in
         background-opacity = 0.76;
         background-blur-radius = 20;
         palette = [
-          "0=#080B16" "1=#E8758D" "2=#79B9B5" "3=#C8CBE6"
-          "4=#6480D7" "5=#8A91E8" "6=#82B8E8" "7=#E8EDFF"
-          "8=#46516F" "9=#FF91A5" "10=#A0D8CF" "11=#F1F3FF"
-          "12=#829AFF" "13=#B2BBFF" "14=#AED8FF" "15=#FFFFFF"
+          "0=#080B16" "1=#FD4663" "2=#678FE4" "3=#E0AF68"
+          "4=#678FE4" "5=#AB66CC" "6=#82B8E8" "7=#E8EDFF"
+          "8=#46516F" "9=#FF6B8B" "10=#7DCFFF" "11=#F1F3FF"
+          "12=#829AFF" "13=#C77DFF" "14=#AED8FF" "15=#FFFFFF"
         ];
         cursor-color = "#A8B7FF";
         selection-background = "#344879";
@@ -941,21 +962,21 @@ in
           selectionFg = "#FFFFFF";
           normal = {
             black = "#080B16";
-            red = "#E8758D";
-            green = "#79B9B5";
-            yellow = "#C8CBE6";
-            blue = "#6480D7";
-            magenta = "#8A91E8";
+            red = "#FD4663";
+            green = "#678FE4";
+            yellow = "#E0AF68";
+            blue = "#678FE4";
+            magenta = "#AB66CC";
             cyan = "#82B8E8";
             white = "#E8EDFF";
           };
           bright = {
             black = "#46516F";
-            red = "#FF91A5";
-            green = "#A0D8CF";
+            red = "#FF6B8B";
+            green = "#7DCFFF";
             yellow = "#F1F3FF";
             blue = "#829AFF";
-            magenta = "#B2BBFF";
+            magenta = "#C77DFF";
             cyan = "#AED8FF";
             white = "#FFFFFF";
           };
@@ -1067,7 +1088,7 @@ in
           progress = "always";
           progress_size = 3;
           controls = "menu,subtitles<has_many_subtitles>,audio<has_many_audio>,video<has_many_video>,gap,prev,play-pause,next,gap,fullscreen";
-          color = "foreground=678fe4,foreground_text=e8edff,background=080b16,background_text=e8edff,curtain=080b16,success=79b9b5,error=fd4663";
+          color = "foreground=678fe4,foreground_text=e8edff,background=080b16,background_text=e8edff,curtain=080b16,success=7dcfff,error=fd4663";
           opacity = "timeline=0.85,controls=0.85,timeline_persisted=0.6";
         };
       };
@@ -1092,13 +1113,13 @@ in
       };
       theme = {
         manager = {
-          cwd = { fg = "#79B9B5"; italic = true; };
+          cwd = { fg = "#7DCFFF"; italic = true; };
           hovered = { fg = "#E8EDFF"; bg = "#1B2437"; bold = true; };
           preview_hovered = { underline = true; };
           find_keyword = { fg = "#FD4663"; bold = true; };
           find_position = { fg = "#AB66CC"; normal = true; };
           marker_selected = { fg = "#AB66CC"; bg = "#AB66CC"; };
-          marker_copied = { fg = "#79B9B5"; bg = "#79B9B5"; };
+          marker_copied = { fg = "#7DCFFF"; bg = "#7DCFFF"; };
           marker_cut = { fg = "#FD4663"; bg = "#FD4663"; };
           tab_active = { fg = "#E8EDFF"; bg = "#1B2437"; bold = true; };
           tab_inactive = { fg = "#AFB1B6"; bg = "#080B16"; };
@@ -1117,12 +1138,12 @@ in
           permissions_t = { fg = "#678FE4"; };
           permissions_r = { fg = "#C8CBE6"; };
           permissions_w = { fg = "#FD4663"; };
-          permissions_x = { fg = "#79B9B5"; };
+          permissions_x = { fg = "#7DCFFF"; };
           permissions_s = { fg = "#AFB1B6"; };
         };
         filetype = {
           rules = [
-            { mime = "image/*"; fg = "#79B9B5"; }
+            { mime = "image/*"; fg = "#7DCFFF"; }
             { mime = "video/*"; fg = "#AB66CC"; }
             { mime = "audio/*"; fg = "#678FE4"; }
             { mime = "application/zip"; fg = "#FD4663"; }
@@ -1272,7 +1293,7 @@ in
 
             /* Status & Highlights */
             --status-danger: #FD4663 !important;
-            --status-positive: #79B9B5 !important;
+            --status-positive: #7DCFFF !important;
             --status-warning: #C8CBE6 !important;
             --mention-foreground: #678FE4 !important;
             --mention-background: rgba(103, 143, 228, 0.15) !important;
