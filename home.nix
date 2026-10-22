@@ -80,29 +80,42 @@ let
     NAME="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.name')"
     ICON="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.icon // "🎨"')"
 
-    stop_wallpaper_engine() {
+    stop_wallpapers() {
+      systemctl --user stop theme-wallpaper-video.service >/dev/null 2>&1 || true
+      systemctl --user stop theme-wallpaper-engine.service >/dev/null 2>&1 || true
       ${pkgs.procps}/bin/pkill -9 -x linux-wallpaper >/dev/null 2>&1 || true
-      while ${pkgs.procps}/bin/pgrep -x linux-wallpaper >/dev/null 2>&1; do
+      ${pkgs.procps}/bin/pkill -9 -x .mpvpaper-wrapp >/dev/null 2>&1 || true
+      while ${pkgs.procps}/bin/pgrep -x linux-wallpaper >/dev/null 2>&1 || ${pkgs.procps}/bin/pgrep -x .mpvpaper-wrapp >/dev/null 2>&1; do
         ${pkgs.coreutils}/bin/sleep 0.05
       done
     }
 
     # 1. Управление обоями
     WP_TYPE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.type // "image"')"
-    if [ "$WP_TYPE" = "wallpaperengine" ]; then
-      WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id')"
-      SCREEN="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.screen // "HDMI-A-1"')"
-      FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
+    SCREEN="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.screen // "HDMI-A-1"')"
+    FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
 
+    if [ "$WP_TYPE" = "video" ]; then
+      VIDEO_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
+      stop_wallpapers
       if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
         noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
       fi
-
-      stop_wallpaper_engine
-      linux-wallpaperengine --fps 75 --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing >/dev/null 2>&1 &
+      if [ -n "$VIDEO_PATH" ] && [ -f "$VIDEO_PATH" ]; then
+        systemd-run --user --unit=theme-wallpaper-video \
+          ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=nvdec" "$SCREEN" "$VIDEO_PATH" >/dev/null 2>&1
+      fi
+    elif [ "$WP_TYPE" = "wallpaperengine" ]; then
+      WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id')"
+      stop_wallpapers
+      if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
+        noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
+      fi
+      systemd-run --user --unit=theme-wallpaper-engine \
+        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing >/dev/null 2>&1
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
       WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
-      stop_wallpaper_engine
+      stop_wallpapers
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
         noctalia msg wallpaper-set "$WP_PATH" >/dev/null 2>&1 || true
       fi
