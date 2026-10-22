@@ -80,6 +80,13 @@ let
     NAME="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.name')"
     ICON="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.icon // "🎨"')"
 
+    stop_wallpaper_engine() {
+      ${pkgs.procps}/bin/pkill -9 -x linux-wallpaper >/dev/null 2>&1 || true
+      while ${pkgs.procps}/bin/pgrep -x linux-wallpaper >/dev/null 2>&1; do
+        ${pkgs.coreutils}/bin/sleep 0.05
+      done
+    }
+
     # 1. Управление обоями
     WP_TYPE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.type // "image"')"
     if [ "$WP_TYPE" = "wallpaperengine" ]; then
@@ -91,12 +98,11 @@ let
         noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
       fi
 
-      ${pkgs.procps}/bin/pkill -x linux-wallpaperengine >/dev/null 2>&1 || true
-      ${pkgs.coreutils}/bin/sleep 0.2
+      stop_wallpaper_engine
       linux-wallpaperengine --fps 75 --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing >/dev/null 2>&1 &
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
       WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
-      ${pkgs.procps}/bin/pkill -x linux-wallpaperengine >/dev/null 2>&1 || true
+      stop_wallpaper_engine
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
         noctalia msg wallpaper-set "$WP_PATH" >/dev/null 2>&1 || true
       fi
