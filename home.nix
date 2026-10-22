@@ -7,6 +7,25 @@ let
     inherit (pkgs.stdenv.hostPlatform) system;
   };
 
+  forceArdorHeadsetProfile = pkgs.writeShellScript "force-ardor-headset-profile" ''
+    ${pkgs.coreutils}/bin/sleep 3
+
+    card="alsa_card.usb-XiiSound_Technology_Corporation_Temple_Pro_Black-00"
+    pactl="${pkgs.pulseaudio}/bin/pactl"
+    amixer="${pkgs.alsa-utils}/bin/amixer"
+
+    # Принудительно выставляем рабочий аналоговый стерео-профиль с микрофоном
+    "$pactl" set-card-profile "$card" output:analog-stereo+input:mono-fallback 2>/dev/null || true
+
+    # Разблокируем оба аппаратных стерео-канала на 100%, чтобы чип не глушил второе ухо
+    "$amixer" -c Black sset 'PCM',0 100% unmute 2>/dev/null || true
+    "$amixer" -c Black sset 'PCM',1 100% unmute 2>/dev/null || true
+
+    sink="$($pactl list sinks short | ${pkgs.gawk}/bin/awk 'tolower($0) ~ /temple/ { print $2; exit }')"
+    if [ -n "$sink" ]; then
+      "$pactl" set-default-sink "$sink"
+    fi
+  '';
 
   niriAutostart = pkgs.writeShellScript "niri-autostart" ''
 
@@ -25,6 +44,213 @@ let
     pgrep -x wl-clip-persist >/dev/null || wl-clip-persist --clipboard regular &
     pgrep -x xwayland-satellite >/dev/null || xwayland-satellite &
     pgrep -x noctalia >/dev/null || noctalia &
+
+    # 4. Восстановление активной темы оформления (Theme Manager)
+    ${themeRestore}/bin/theme-restore &
+  '';
+
+  themeApply = pkgs.writeShellScriptBin "theme-apply" ''
+    set -euo pipefail
+
+    TARGET_ID="''${1:-}"
+    if [ -z "$TARGET_ID" ]; then
+      echo "Использование: theme-apply <preset_id>" >&2
+      exit 1
+    fi
+
+    PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+    STATE_DIR="$HOME/.local/state/theme-manager"
+    CONFIG_DIR="$HOME/.config/theme-manager"
+    NIRI_DIR="$HOME/.config/niri"
+    GHOSTTY_DIR="$HOME/.config/ghostty"
+
+    mkdir -p "$STATE_DIR" "$CONFIG_DIR" "$NIRI_DIR" "$GHOSTTY_DIR"
+
+    if [ ! -f "$PRESETS_FILE" ]; then
+      echo "Файл пресетов не найден: $PRESETS_FILE" >&2
+      exit 1
+    fi
+
+    PRESET="$(${pkgs.jq}/bin/jq -e --arg id "$TARGET_ID" '.presets[] | select(.id == $id)' "$PRESETS_FILE" 2>/dev/null || true)"
+    if [ -z "$PRESET" ]; then
+      echo "Пресет '$TARGET_ID' не найден в $PRESETS_FILE" >&2
+      exit 1
+    fi
+
+    NAME="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.name')"
+    ICON="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.icon // "🎨"')"
+
+    # 1. Управление обоями
+    WP_TYPE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.type // "image"')"
+    if [ "$WP_TYPE" = "wallpaperengine" ]; then
+      WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id')"
+      SCREEN="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.screen // "HDMI-A-1"')"
+      FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
+
+      if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
+        noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
+      fi
+
+      ${pkgs.procps}/bin/pkill -x linux-wallpaperengine >/dev/null 2>&1 || true
+      ${pkgs.coreutils}/bin/sleep 0.2
+      linux-wallpaperengine --fps 75 --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing >/dev/null 2>&1 &
+    elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
+      WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
+      ${pkgs.procps}/bin/pkill -x linux-wallpaperengine >/dev/null 2>&1 || true
+      if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
+        noctalia msg wallpaper-set "$WP_PATH" >/dev/null 2>&1 || true
+      fi
+    fi
+
+    # 2. Палитра Noctalia
+    NOCTALIA_SRC="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.noctalia.source // "custom"')"
+    NOCTALIA_PAL="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.noctalia.palette // "Nullscapes"')"
+    noctalia msg color-scheme-set "$NOCTALIA_SRC" "$NOCTALIA_PAL" >/dev/null 2>&1 || true
+
+    # 3. Цвета Niri (focus-ring, tab-indicator, shadow, overview)
+    RING_FROM="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.focus_ring.from // "#678FE4"')"
+    RING_TO="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.focus_ring.to // "#AB66CC"')"
+    RING_ANGLE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.focus_ring.angle // 135')"
+
+    TAB_FROM="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.tab_indicator.from // "#678FE4"')"
+    TAB_TO="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.tab_indicator.to // "#AB66CC"')"
+    TAB_ANGLE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.tab_indicator.angle // 90')"
+    TAB_INACTIVE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.tab_indicator.inactive // "#1B243788"')"
+
+    SHADOW_COL="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.shadow // "#050711cc"')"
+    OVERVIEW_BG="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.niri.overview_backdrop // "#080B16dd"')"
+
+    cat << EOF > "$NIRI_DIR/theme.kdl.tmp"
+layout {
+    focus-ring {
+        width 2.5
+        active-gradient from="$RING_FROM" to="$RING_TO" angle=$RING_ANGLE relative-to="workspace-view"
+        inactive-color "transparent"
+    }
+
+    tab-indicator {
+        hide-when-single-tab
+        place-within-column
+        gap 6
+        width 4
+        length total-proportion=0.85
+        position "top"
+        active-gradient from="$TAB_FROM" to="$TAB_TO" angle=$TAB_ANGLE
+        inactive-color "$TAB_INACTIVE"
+        corner-radius 6
+    }
+
+    shadow {
+        on
+        softness 42
+        spread 5
+        offset x=0 y=10
+        color "$SHADOW_COL"
+    }
+}
+
+overview {
+    backdrop-color "$OVERVIEW_BG"
+}
+EOF
+    mv "$NIRI_DIR/theme.kdl.tmp" "$NIRI_DIR/theme.kdl"
+    niri msg action load-config-file >/dev/null 2>&1 || true
+
+    # 4. Цвета Ghostty
+    GH_BG="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.ghostty.background // "080B16"')"
+    GH_FG="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.ghostty.foreground // "E8EDFF"')"
+    GH_CUR="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.ghostty.cursor_color // "#A8B7FF"')"
+    GH_SEL_BG="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.ghostty.selection_background // "#344879"')"
+    GH_SEL_FG="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.ghostty.selection_foreground // "#FFFFFF"')"
+
+    cat << EOF > "$GHOSTTY_DIR/theme.conf.tmp"
+background = $GH_BG
+foreground = $GH_FG
+cursor-color = $GH_CUR
+selection-background = $GH_SEL_BG
+selection-foreground = $GH_SEL_FG
+EOF
+
+    echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.ghostty.palette[]?' 2>/dev/null | while read -r p_line; do
+      if [ -n "$p_line" ]; then
+        echo "palette = $p_line" >> "$GHOSTTY_DIR/theme.conf.tmp"
+      fi
+    done
+
+    mv "$GHOSTTY_DIR/theme.conf.tmp" "$GHOSTTY_DIR/theme.conf"
+
+    # 5. Сохранение состояния
+    echo "$TARGET_ID" > "$STATE_DIR/current"
+
+    # 6. Уведомление
+    ${pkgs.libnotify}/bin/notify-send -a "Theme Manager" -i preferences-desktop-theme "Тема применена" "$ICON $NAME" >/dev/null 2>&1 || true
+  '';
+
+  themeMenu = pkgs.writeShellScriptBin "theme-menu" ''
+    set -euo pipefail
+
+    PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+    if [ ! -f "$PRESETS_FILE" ]; then
+      theme-restore --init-only || true
+    fi
+
+    CHOICES="$(${pkgs.jq}/bin/jq -r '.presets[] | "\(.icon) \(.name)\t\(.id)"' "$PRESETS_FILE")"
+    CHOICES="$CHOICES"$'\n'"🎲 Случайный сетап (Random)\trandom"
+
+    SELECTED="$(printf '%s\n' "$CHOICES" | cut -f1 | noctalia dmenu -p "Выберите тему оформления:" || true)"
+    if [ -z "$SELECTED" ]; then
+      exit 0
+    fi
+
+    TARGET_ID="$(printf '%s\n' "$CHOICES" | grep -F "$SELECTED" | cut -f2 | head -n 1)"
+
+    if [ "$TARGET_ID" = "random" ]; then
+      theme-random
+    elif [ -n "$TARGET_ID" ]; then
+      theme-apply "$TARGET_ID"
+    fi
+  '';
+
+  themeRandom = pkgs.writeShellScriptBin "theme-random" ''
+    set -euo pipefail
+
+    PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+    STATE_DIR="$HOME/.local/state/theme-manager"
+
+    CURRENT=""
+    if [ -f "$STATE_DIR/current" ]; then
+      CURRENT="$(cat "$STATE_DIR/current")"
+    fi
+
+    IDS="$(${pkgs.jq}/bin/jq -r '.presets[].id' "$PRESETS_FILE")"
+    FILTERED="$(printf '%s\n' "$IDS" | grep -v "^''${CURRENT}$" || printf '%s\n' "$IDS")"
+    RANDOM_ID="$(printf '%s\n' "$FILTERED" | ${pkgs.coreutils}/bin/shuf -n 1)"
+
+    if [ -n "$RANDOM_ID" ]; then
+      theme-apply "$RANDOM_ID"
+    fi
+  '';
+
+  themeRestore = pkgs.writeShellScriptBin "theme-restore" ''
+    set -euo pipefail
+
+    STATE_DIR="$HOME/.local/state/theme-manager"
+    CONFIG_DIR="$HOME/.config/theme-manager"
+
+    mkdir -p "$STATE_DIR" "$CONFIG_DIR"
+
+    if [ "''${1:-}" = "--init-only" ]; then
+      exit 0
+    fi
+
+    ${pkgs.coreutils}/bin/sleep 1.2
+
+    CURRENT="nullscapes"
+    if [ -f "$STATE_DIR/current" ]; then
+      CURRENT="$(cat "$STATE_DIR/current")"
+    fi
+
+    theme-apply "$CURRENT" || true
   '';
 in
 {
@@ -37,16 +263,26 @@ in
     username = "spike";
     homeDirectory = "/home/spike";
     stateVersion = "26.05";
+    sessionPath = [
+      "$HOME/.local/bin"
+      "$HOME/.npm-global/bin"
+    ];
 
     packages = with pkgs; [
       # Терминальные утилиты и инструменты разработки
+      aider-chat
       btop
       cava
       cbonsai
+      antigravity-cli
+      codex
       ffmpeg
       jq
+      nodejs_22
+      opencode
       peaclock
       pipes-rs
+      libsecret
       psmisc
       gcc
       mpvpaper
@@ -60,8 +296,11 @@ in
       wf-recorder
 
       # Пользовательские приложения
+      inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
+      bottles
       file-roller
       gnome-text-editor
+      libreoffice
       gpu-screen-recorder-gtk
       kdePackages.dolphin
       kdePackages.kate
@@ -70,6 +309,7 @@ in
       linux-wallpaperengine
       loupe
       nautilus
+      prismlauncher
       protonup-qt
       swaybg
       telegram-desktop
@@ -83,6 +323,13 @@ in
       wl-clipboard
       wtype
       satellitePkgs.xwayland-satellite
+
+      # Управление темами и уведомлениями (Theme Manager)
+      libnotify
+      themeApply
+      themeMenu
+      themeRandom
+      themeRestore
     ];
 
     pointerCursor = {
@@ -98,6 +345,8 @@ in
       XCURSOR_THEME = "catppuccin-mocha-dark-cursors";
       XCURSOR_SIZE = "20";
       MOZ_ENABLE_WAYLAND = "1";
+      DEFAULT_BROWSER = "zen-beta";
+      BROWSER = "zen-beta";
       NH_FLAKE = "/etc/nixos";
     };
 
@@ -108,10 +357,11 @@ in
           [safe]
             directory = /etc/nixos
           [user]
-            name = triplespike
-            email = vladikzolota12@gmail.com
+            name = Spike
+            email = spike@nixos.local
         '';
       };
+      "/home/spike/.gtkrc-2.0".force = lib.mkForce true;
       ".icons/default/index.theme".force = lib.mkForce true;
 
       ".config/mozilla/firefox/mrf4l2sq.default/user.js" = {
@@ -167,6 +417,139 @@ in
           }
 
           /* Стилизация скроллбаров под Nullscapes */
+          * {
+            scrollbar-color: #678FE4 #080B16 !important;
+            scrollbar-width: thin !important;
+          }
+        '';
+      };
+
+      ".config/zen/qn0dspde.Default Profile/user.js" = {
+        force = lib.mkForce true;
+        text = ''
+          user_pref("browser.shell.checkDefaultBrowser", false);
+          user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+          user_pref("zen.widget.linux.transparency", true);
+          user_pref("zen.theme.acrylic-sidebar", true);
+          user_pref("zen.theme.acrylic-urlbar", true);
+          user_pref("zen.theme.accent-color", "#678FE4");
+          user_pref("zen.theme.border-radius", 14);
+          user_pref("zen.theme.content-element-separation", 4);
+          user_pref("zen.theme.gradient.show-custom-colors", true);
+          user_pref("layers.acceleration.force-enabled", true);
+          user_pref("svg.context-properties.content.enabled", true);
+          user_pref("layout.css.color-mix.enabled", true);
+        '';
+      };
+
+      ".config/zen/qn0dspde.Default Profile/chrome/userChrome.css" = {
+        force = lib.mkForce true;
+        text = ''
+          /* Zen Browser — Nullscapes Rice Theme */
+          :root {
+            --zen-primary-color: #678FE4 !important;
+            --zen-colors-primary: #678FE4 !important;
+            --zen-colors-primary-foreground: #FFFFFF !important;
+            --zen-colors-secondary: #1B2437 !important;
+            --zen-colors-tertiary: #141B29 !important;
+            --zen-colors-hover-bg: rgba(40, 54, 83, 0.75) !important;
+            --zen-colors-border: rgba(103, 143, 228, 0.22) !important;
+            --zen-colors-border-contrast: rgba(171, 102, 204, 0.4) !important;
+            --zen-colors-input-bg: #141B29 !important;
+
+            --zen-branding-dark: #080B16 !important;
+            --zen-branding-bg: #080B16 !important;
+            --zen-main-browser-background: #080B16 !important;
+            --zen-main-browser-background-toolbar: #080B16 !important;
+            --zen-dialog-background: #141B29 !important;
+            --zen-urlbar-background: rgba(20, 27, 41, 0.85) !important;
+            --zen-border-radius: 14px !important;
+
+            --toolbar-bgcolor: rgba(8, 11, 22, 0.78) !important;
+            --tab-selected-bgcolor: #1B2437 !important;
+            --lwt-accent-color: #080B16 !important;
+            --lwt-text-color: #E8EDFF !important;
+            --arrowpanel-background: #141B29 !important;
+            --arrowpanel-color: #E8EDFF !important;
+            --arrowpanel-border-color: rgba(103, 143, 228, 0.3) !important;
+            --toolbar-field-color: #E8EDFF !important;
+            --toolbar-field-focus-color: #FFFFFF !important;
+          }
+
+          #main-window,
+          #zen-main-app-wrapper,
+          #navigator-toolbox {
+            background-color: var(--zen-main-browser-background) !important;
+          }
+
+          #zen-sidebar,
+          #navigator-toolbox[zen-floating="true"],
+          #TabsToolbar {
+            background-color: rgba(14, 20, 33, 0.82) !important;
+            backdrop-filter: blur(20px) saturate(135%) !important;
+            border-right: 1px solid var(--zen-colors-border) !important;
+          }
+
+          .tabbrowser-tab {
+            margin-block: 2px !important;
+          }
+
+          .tabbrowser-tab .tab-background {
+            border-radius: 10px !important;
+            transition: all 0.15s ease-in-out !important;
+          }
+
+          .tabbrowser-tab:hover .tab-background {
+            background-color: var(--zen-colors-hover-bg) !important;
+          }
+
+          .tabbrowser-tab[selected="true"] .tab-background,
+          .tabbrowser-tab[zen-active="true"] .tab-background {
+            background: linear-gradient(135deg, #1B2437 0%, #222F47 100%) !important;
+            border: 1px solid rgba(103, 143, 228, 0.55) !important;
+            box-shadow: 0 2px 10px rgba(103, 143, 228, 0.22), inset 0 0 8px rgba(103, 143, 228, 0.1) !important;
+          }
+
+          .tabbrowser-tab[selected="true"] .tab-label {
+            font-weight: 600 !important;
+            color: #FFFFFF !important;
+          }
+
+          #urlbar,
+          .urlbar-background {
+            border-radius: 12px !important;
+            background-color: var(--zen-urlbar-background) !important;
+            border: 1px solid rgba(97, 103, 113, 0.32) !important;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+          }
+
+          #urlbar[focused="true"] .urlbar-background {
+            border-color: #678FE4 !important;
+            box-shadow: 0 0 0 2px rgba(103, 143, 228, 0.3), 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+          }
+
+          #appcontent browser,
+          .browserSidebarContainer {
+            border-radius: 12px !important;
+            overflow: hidden !important;
+          }
+
+          menupopup,
+          panel[type="arrow"],
+          .panel-arrowcontent {
+            --panel-background: #141B29 !important;
+            --panel-color: #E8EDFF !important;
+            --panel-border-color: rgba(103, 143, 228, 0.25) !important;
+            border-radius: 12px !important;
+          }
+
+          menuitem:hover,
+          menu:hover {
+            background-color: var(--zen-colors-hover-bg) !important;
+            color: #FFFFFF !important;
+            border-radius: 6px !important;
+          }
+
           * {
             scrollbar-color: #678FE4 #080B16 !important;
             scrollbar-width: thin !important;
@@ -251,7 +634,7 @@ in
       settings = {
         logo = {
           type = "kitty-direct";
-          source = "${./assets/fastfetch/Easy.png}";
+          source = "/home/spike/.config/fastfetch/Easy.png";
           width = 26;
           height = 13;
           padding = {
@@ -286,7 +669,10 @@ in
           { type = "cpu"; key = "│   Процессор  "; keyColor = "bright_cyan"; }
           { type = "gpu"; key = "│ 󰢮  Видеокарта "; keyColor = "bright_cyan"; format = "{1} {2}"; }
           { type = "memory"; key = "│ 󰘚  Память ОЗУ "; keyColor = "bright_cyan"; }
-          { type = "disk"; key = "│ 󰋊  Диск (Root)"; folders = "/"; keyColor = "bright_cyan"; }          { type = "custom"; format = "${esc}[38;2;121;185;181m╰───────────────────────────────────────────────────${esc}[0m"; }
+          { type = "disk"; key = "│ 󰋊  NVMe (Root)"; folders = "/"; keyColor = "bright_cyan"; }
+          { type = "disk"; key = "│ 󰋊  HDD (Игры) "; folders = "/mnt/storage"; keyColor = "bright_cyan"; }
+          { type = "disk"; key = "│ 󰋊  SSD игровой"; folders = "/mnt/ssd"; keyColor = "bright_cyan"; }
+          { type = "custom"; format = "${esc}[38;2;121;185;181m╰───────────────────────────────────────────────────${esc}[0m"; }
           { type = "colors"; symbol = "circle"; paddingLeft = 2; }
         ];
       };
@@ -318,6 +704,11 @@ in
       shellAliases = {
         pls = "sudo";
         cat = "bat --paging=never";
+        zen = "zen-beta";
+        agy-switch = "agy-accounts switch";
+        agy-whoami = "agy-accounts status";
+        agy-acc1 = "agy-accounts acc1";
+        agy-acc2 = "agy-accounts acc2";
       };
       shellAbbrs.upp = "nh os switch";
       plugins = [
@@ -361,6 +752,7 @@ in
     ghostty = {
       enable = true;
       settings = {
+        config-file = "?theme.conf";
         font-family = "JetBrainsMono Nerd Font";
         window-width = 96;
         window-height = 25;
@@ -424,7 +816,7 @@ in
           screenshot = {
             freeze_screen = true;
             pipe_to_command = true;
-            pipe_command = "${pkgs.satty}/bin/satty --filename - --fullscreen --output-filename ${config.home.homeDirectory}/Pictures/Screenshots/Screenshot-%Y-%m-%d_%H-%M-%S.png";
+            pipe_command = "${pkgs.satty}/bin/satty --filename - --fullscreen --output-filename /home/spike/Pictures/Screenshots/Screenshot-%Y-%m-%d_%H-%M-%S.png";
             save_to_file = false;
             copy_to_clipboard = false;
           };
@@ -558,48 +950,27 @@ in
       in
       {
         enable = true;
-        theme = spicePkgs.themes.catppuccin;
-        colorScheme = "custom";
-        customColorScheme = {
-          text               = "E8EDFF";
-          subtext            = "AFB1B6";
-          main               = "080B16";
-          main-elevated      = "141B29";
-          highlight          = "1B2437";
-          highlight-elevated = "283653";
-          sidebar            = "080B16";
-          player             = "080B16";
-          card               = "141B29";
-          shadow             = "050711";
-          selected-row       = "678FE4";
-          button             = "678FE4";
-          button-active      = "AB66CC";
-          button-disabled    = "46516F";
-          tab-active         = "1B2437";
-          notification       = "1B2437";
-          notification-error = "FD4663";
-          equalizer          = "678FE4";
-          misc               = "715CD6";
+        theme = spicePkgs.themes.sleek;
+        colorScheme = "Catppuccin";
 
-          crust              = "050711";
-          mantle             = "080B16";
-          base               = "080B16";
-          surface0           = "141B29";
-          surface1           = "1B2437";
-          surface2           = "283653";
-          overlay0           = "46516F";
-          overlay1           = "616771";
-          overlay2           = "AFB1B6";
-          blue               = "678FE4";
-          mauve              = "AB66CC";
-          lavender           = "A8B7FF";
-          red                = "FD4663";
-          green              = "79B9B5";
-          yellow             = "C8CBE6";
-        };
+        # Кастомные приложения внутри Spotify
+        enabledCustomApps = with spicePkgs.apps; [
+          marketplace       # Встроенный каталог тем и расширений прямо в приложении
+          lyricsPlus        # Альтернативный просмотр текстов
+          historyInSidebar  # История треков в боковом меню
+          newReleases       # Свежие релизы любимых артистов
+        ];
+
+        # Расширения
         enabledExtensions = with spicePkgs.extensions; [
-          adblock
-          shuffle
+          adblock           # Блокировка рекламы
+          shuffle           # Улучшенный Shuffle+
+          beautifulLyrics   # Анимированное караоке в стиле Apple Music
+          fullAppDisplay    # Полноэкранный плеер с размытой обложкой
+          coverAmbience     # Подсветка интерфейса цветом текущего альбома
+          songStats         # Показ BPM и тональности трека
+          loopyLoop         # Зацикливание любого отрезка трека
+          bookmark          # Закладки на интересные моменты
         ];
       };
 
@@ -757,439 +1128,7 @@ in
     xwaylandSatellitePackage = null;
     portalPackage = null;
     checkConfig = false;
-    extraConfig = ''
-      // Запуск единого скрипта автозапуска
-      spawn-at-startup "~/.config/niri/autostart.sh"
-
-      // ==========================================================
-      //                   Настройки монитора
-      // ==========================================================
-
-      output "HDMI-A-1" {
-          mode "1920x1080@75.000"
-          scale 1.0
-      }
-
-      hotkey-overlay {
-          skip-at-startup
-      }
-
-      screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
-
-      // Мягкий, умеренный блюр (меньше радиус и число проходов)
-      blur {
-          passes 2
-          offset 1.5
-      }
-
-      // ==========================================================
-      //                     Ввод и клавиатура
-      // ==========================================================
-
-      input {
-          keyboard {
-              xkb {
-                  layout "us,ru"
-                  options "grp:win_space_toggle"
-              }
-              repeat-delay 300
-              repeat-rate 50
-          }
-      }
-
-      // ==========================================================
-      //                   Внешний вид и анимации
-      // ==========================================================
-
-      layout {
-          gaps 16
-          center-focused-column "never"
-
-          // Прозрачный фон столов (чтобы живые обои оставались неподвижными)
-          background-color "transparent"
-
-          preset-column-widths {
-              proportion 0.25
-              proportion 0.5
-              proportion 0.75
-              proportion 1.0
-          }
-
-          // Космический киберпанк-градиент Nullscapes (Blue -> Purple)
-          focus-ring {
-              width 2.5
-              active-gradient from="#678FE4" to="#AB66CC" angle=135 relative-to="workspace-view"
-              inactive-color "transparent"
-          }
-
-          // Индикатор табов в колонке: неоновая капсула
-          tab-indicator {
-              hide-when-single-tab
-              place-within-column
-              gap 6
-              width 4
-              length total-proportion=0.85
-              position "top"
-              active-gradient from="#678FE4" to="#AB66CC" angle=90
-              inactive-color "#1B243788"
-              corner-radius 6
-          }
-
-          // Глубокая полупрозрачная тень
-          shadow {
-              on
-              softness 42
-              spread 5
-              offset x=0 y=10
-              color "#050711cc"
-          }
-
-          // Внутренние отступы от краёв экрана до ленты
-          struts {
-              left 10
-              right 10
-              top 8
-              bottom 10
-          }
-      }
-
-      overview {
-          backdrop-color "#080B16dd"
-          workspace-shadow {
-              on
-          }
-      }
-
-      animations {
-          horizontal-view-movement {
-              spring damping-ratio=0.84 stiffness=820 epsilon=0.0001
-          }
-          window-movement {
-              spring damping-ratio=0.82 stiffness=800 epsilon=0.0001
-          }
-          window-resize {
-              spring damping-ratio=0.80 stiffness=900 epsilon=0.0001
-          }
-          workspace-switch {
-              spring damping-ratio=0.85 stiffness=850 epsilon=0.0001
-          }
-          overview-open-close {
-              spring damping-ratio=0.85 stiffness=800 epsilon=0.0001
-          }
-          screenshot-ui-open {
-              duration-ms 200
-              curve "ease-out-expo"
-          }
-
-          // Плавные анимации открытия и закрытия окон
-          window-open {
-              duration-ms 200
-              curve "ease-out-expo"
-          }
-          window-close {
-              duration-ms 150
-              curve "ease-out-quad"
-          }
-      }
-
-      environment {
-          XCURSOR_THEME "catppuccin-mocha-dark-cursors"
-          XCURSOR_SIZE "20"
-          QT_QPA_PLATFORMTHEME "kde"
-      }
-
-      cursor {
-          xcursor-theme "catppuccin-mocha-dark-cursors"
-          xcursor-size 20
-      }
-
-      prefer-no-csd
-
-      // ==========================================================
-      //                     Правила для окон
-      // ==========================================================
-
-      // Отключаем рентген статики для элементов Noctalia
-      layer-rule {
-          match namespace="^noctalia-(bar|notification|dock|panel|attached-panel|osd).*"
-          background-effect {
-              xray false
-          }
-      }
-
-      // Запрещаем мылить фон за пределами меню
-      layer-rule {
-          match namespace="^noctalia-backdrop.*"
-          background-effect {
-              blur false
-          }
-      }
-
-      // Исключаем размытие и рентген для оверлея скриншотов Noctalia
-      layer-rule {
-          match namespace="^noctalia-(screenshot-region|annotate).*"
-          background-effect {
-              blur false
-              xray false
-          }
-      }
-
-      // Закругление углов для всех окон (16px под стиль капсул)
-      // draw-border-with-background false предотвращает отрисовку рамки/градиента сплошной плашкой позади полупрозрачных окон
-      window-rule {
-          geometry-corner-radius 16
-          clip-to-geometry true
-          draw-border-with-background false
-      }
-
-      // Fullscreen games & performance-critical apps: direct scanout with zero compositor overhead
-      window-rule {
-          match app-id=r#"(?i).*(steam_app_|geometrydash).*"#
-          open-fullscreen true
-          geometry-corner-radius 0
-          clip-to-geometry false
-          shadow {
-              off
-          }
-      }
-
-      // Ghostty: ровно 50% экрана (0.5), чтобы идеально вставать рядом с браузером без скролла
-      window-rule {
-          match app-id="(?i).*ghostty.*"
-          default-column-width { proportion 0.5; }
-      }
-
-      // Scratchpad терминал Ghostty по центру экрана
-      window-rule {
-          match app-id="(?i).*ghostty-scratch.*"
-          open-floating true
-          default-column-width { proportion 0.62; }
-          default-window-height { proportion 0.62; }
-          geometry-corner-radius 16
-          clip-to-geometry true
-      }
-
-      // Telegram Desktop: 42% экрана
-      window-rule {
-          match app-id="(?i).*telegram.*"
-          default-column-width { proportion 0.42; }
-      }
-
-      // Spotify: умеренная прозрачность к живым обоям стола и легкий блюр (xray false)
-      window-rule {
-          match app-id="(?i).*spotify.*"
-          opacity 0.88
-          background-effect {
-              blur true
-              xray false
-          }
-      }
-
-      // Vesktop: нативное прозрачное стекло через Electron transparent с аппаратным блюром (иконки 100% плотные)
-      window-rule {
-          match app-id="(?i).*vesktop.*"
-          background-effect {
-              blur true
-              xray false
-          }
-      }
-
-      // MPV: аккуратное центрированное плавающее окно матового стекла
-      window-rule {
-          match app-id="(?i).*mpv.*"
-          open-floating true
-          geometry-corner-radius 16
-          clip-to-geometry true
-      }
-
-      // Firefox всегда открывается строго на 1-м воркспейсе с шириной 50%
-      window-rule {
-          match app-id="(?i).*firefox.*"
-          open-on-workspace "1"
-          default-column-width { proportion 0.5; }
-          background-effect {
-              blur true
-              xray false
-          }
-      }
-
-      // Плавающее окно Picture-in-Picture (PiP) в углу с закруглениями
-      window-rule {
-          match app-id="(?i).*firefox.*" title="(?i).*(picture-in-picture|картинка в картинке).*"
-          open-floating true
-          default-column-width { fixed 520; }
-          default-window-height { fixed 292; }
-          default-floating-position x=24 y=24 relative-to="bottom-right"
-          geometry-corner-radius 14
-          clip-to-geometry true
-      }
-
-      // Автоматические плавающие окна для системных утилит и медиа
-      window-rule {
-          match app-id="(?i).*(pavucontrol|satty|blueman-manager|gpu-screen-recorder|org.gnome.Loupe|nm-connection-editor).*"
-          open-floating true
-      }
-
-      // Автоматические плавающие окна для диалогов и выбора файлов
-      window-rule {
-          match title="(?i).*(выбор файла|open file|save file|сохранить файл|подтверждение|dialog).*"
-          open-floating true
-      }
-
-      // ==========================================================
-      //                     Горячие клавиши
-      // ==========================================================
-
-      binds {
-          // Всплывающая интерактивная подсказка всех клавиш (Mod+Shift+?)
-          Mod+Shift+Slash { show-hotkey-overlay; }
-
-          // ------------------------------------------------------
-          //                   Запуск приложений
-          // ------------------------------------------------------
-          // Терминал Ghostty
-          Mod+Return { spawn "ghostty"; }
-          Ctrl+Alt+T { spawn "ghostty"; }
-
-          // Scratchpad плавающий терминал
-          Mod+T { spawn "ghostty" "--class=ghostty-scratch" "--title=Scratchpad"; }
-
-          // Файловый менеджер Dolphin
-          Mod+E { spawn "dolphin"; }
-
-          // Браузер Firefox
-          Mod+B { spawn "firefox"; }
-
-          // Музыкальный плеер Spotify
-          Mod+M { spawn "spotify"; }
-
-          // Лаунчер приложений Noctalia (поиск)
-          Mod+D { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
-
-          // Центр управления (шторка быстрых настроек)
-          Mod+Shift+C { spawn "noctalia" "msg" "panel-toggle" "control-center"; }
-          Mod+N { spawn "noctalia" "msg" "settings-toggle"; }
-          Mod+P { spawn "noctalia" "msg" "settings-toggle"; }
-
-          // Быстрые панели Noctalia
-          Mod+Tab { spawn "noctalia" "msg" "window-switcher"; }
-          Mod+X { spawn "noctalia" "msg" "panel-toggle" "session"; }
-
-          // ------------------------------------------------------
-          //                   Управление окнами
-          // ------------------------------------------------------
-          Alt+F4 { close-window; }
-          Mod+Q  { close-window; }
-          Mod+V  { toggle-window-floating; }
-          Mod+Shift+V { switch-focus-between-floating-and-tiling; }
-          Mod+W  { toggle-column-tabbed-display; }
-          Mod+O  { toggle-overview; }
-
-          // Сшить / расцепить окна в колонке
-          Mod+BracketLeft  { consume-or-expel-window-left; }
-          Mod+BracketRight { consume-or-expel-window-right; }
-          Mod+Comma        { consume-window-into-column; }
-          Mod+Period       { expel-window-from-column; }
-
-          // Навигация по ленте (влево / вправо)
-          Mod+Left  { focus-column-left; }
-          Mod+Right { focus-column-right; }
-          Mod+H     { focus-column-left; }
-          Mod+L     { focus-column-right; }
-
-          // Перемещение колонок внутри воркспейса (влево / вправо)
-          Mod+Shift+Left  { move-column-left; }
-          Mod+Shift+Right { move-column-right; }
-          Mod+Shift+H     { move-column-left; }
-          Mod+Shift+L     { move-column-right; }
-
-          // Навигация по окнам/вкладкам в колонке (вверх / вниз)
-          Mod+Page_Down { focus-window-down; }
-          Mod+Page_Up   { focus-window-up; }
-          Mod+J         { focus-window-down; }
-          Mod+K         { focus-window-up; }
-
-          // Перемещение окон внутри колонки (вверх / вниз)
-          Mod+Shift+Page_Down { move-window-down; }
-          Mod+Shift+Page_Up   { move-window-up; }
-          Mod+Shift+J         { move-window-down; }
-          Mod+Shift+K         { move-window-up; }
-
-          // Размеры и полный экран (привычная моторика)
-          Mod+Up      { maximize-column; }
-          Mod+Down    { switch-preset-column-width; }
-          Mod+F       { maximize-column; }
-          Mod+Ctrl+F  { fullscreen-window; }
-          Mod+Shift+F { fullscreen-window; }
-
-          // Выход из сессии Niri в SDDM
-          Mod+Shift+E { quit; }
-
-          // ------------------------------------------------------
-          //                 Навигация по воркспейсам
-          // ------------------------------------------------------
-
-          Mod+1 { focus-workspace 1; }
-          Mod+2 { focus-workspace 2; }
-          Mod+3 { focus-workspace 3; }
-          Mod+4 { focus-workspace 4; }
-          Mod+5 { focus-workspace 5; }
-          Mod+6 { focus-workspace 6; }
-          Mod+7 { focus-workspace 7; }
-          Mod+8 { focus-workspace 8; }
-          Mod+9 { focus-workspace 9; }
-
-          // Перенос активной колонки на нужный воркспейс
-          Mod+Shift+1 { move-column-to-workspace 1; }
-          Mod+Shift+2 { move-column-to-workspace 2; }
-          Mod+Shift+3 { move-column-to-workspace 3; }
-          Mod+Shift+4 { move-column-to-workspace 4; }
-          Mod+Shift+5 { move-column-to-workspace 5; }
-          Mod+Shift+6 { move-column-to-workspace 6; }
-          Mod+Shift+7 { move-column-to-workspace 7; }
-          Mod+Shift+8 { move-column-to-workspace 8; }
-          Mod+Shift+9 { move-column-to-workspace 9; }
-
-          // Прыжок на предыдущий активный воркспейс
-          Mod+Shift+Tab { focus-workspace-previous; }
-
-          // Листание воркспейсов клавишами
-          Mod+U         { focus-workspace-down; }
-          Mod+I         { focus-workspace-up; }
-
-          // Перемещение текущей колонки на воркспейс выше/ниже
-          Mod+Shift+U         { move-column-to-workspace-down; }
-          Mod+Shift+I         { move-column-to-workspace-up; }
-
-          // Плавное листание воркспейсов колесиком мыши с зажатым Mod
-          Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
-          Mod+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
-
-          // ------------------------------------------------------
-          //       Мультимедиа и громкость (Noctalia IPC OSD)
-          // ------------------------------------------------------
-
-          XF86AudioRaiseVolume allow-when-locked=true { spawn "noctalia" "msg" "volume-up"; }
-          XF86AudioLowerVolume allow-when-locked=true { spawn "noctalia" "msg" "volume-down"; }
-          XF86AudioMute        allow-when-locked=true { spawn "noctalia" "msg" "volume-mute"; }
-
-          XF86MonBrightnessUp   allow-when-locked=true { spawn "noctalia" "msg" "brightness-up"; }
-          XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia" "msg" "brightness-down"; }
-
-          XF86AudioPlay        allow-when-locked=true { spawn "playerctl" "play-pause"; }
-          XF86AudioNext        allow-when-locked=true { spawn "playerctl" "next"; }
-          XF86AudioPrev        allow-when-locked=true { spawn "playerctl" "previous"; }
-
-          // ------------------------------------------------------
-          //                      Скриншоты
-          // ------------------------------------------------------
-          Print       { spawn "noctalia" "msg" "screenshot-region"; }
-          Mod+Shift+S { spawn "noctalia" "msg" "screenshot-region"; }
-          Ctrl+Print  { screenshot-screen; }
-          Alt+Print   { screenshot-window; }
-      }
-
-    '';
+    extraConfig = builtins.readFile ./niri.kdl;
   };
 
   services.swayidle = {
@@ -1204,6 +1143,18 @@ in
     ];
   };
 
+  systemd.user.services.force-ardor-headset = {
+    Unit = {
+      Description = "Sequential profile toggle for Spooky's Ardor Headset";
+      After = [ "pipewire.service" "pipewire-pulse.service" "wireplumber.service" ];
+      Wants = [ "pipewire.service" "pipewire-pulse.service" "wireplumber.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = forceArdorHeadsetProfile;
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
 
   xdg = {
     enable = true;
@@ -1213,7 +1164,7 @@ in
     mimeApps = {
       enable = true;
       defaultApplications = {
-        "application/xhtml+xml" = "firefox.desktop";
+        "application/xhtml+xml" = "zen-beta.desktop";
         "image/avif" = "org.gnome.Loupe.desktop";
         "image/bmp" = "org.gnome.Loupe.desktop";
         "image/gif" = "org.gnome.Loupe.desktop";
@@ -1222,20 +1173,31 @@ in
         "image/svg+xml" = "org.gnome.Loupe.desktop";
         "image/webp" = "org.gnome.Loupe.desktop";
         "inode/directory" = "org.kde.dolphin.desktop";
-        "text/html" = "firefox.desktop";
+        "text/html" = "zen-beta.desktop";
+        "x-scheme-handler/about" = "zen-beta.desktop";
         "x-scheme-handler/discord" = "vesktop.desktop";
         "x-scheme-handler/file" = "org.kde.dolphin.desktop";
-        "x-scheme-handler/http" = "firefox.desktop";
-        "x-scheme-handler/https" = "firefox.desktop";
+        "x-scheme-handler/http" = "zen-beta.desktop";
+        "x-scheme-handler/https" = "zen-beta.desktop";
         "x-scheme-handler/sftp" = "org.kde.dolphin.desktop";
         "x-scheme-handler/tg" = "org.telegram.desktop.desktop";
         "x-scheme-handler/tonsite" = "org.telegram.desktop.desktop";
+        "x-scheme-handler/unknown" = "zen-beta.desktop";
       };
     };
 
     userDirs = {
       enable = true;
       createDirectories = true;
+      desktop = "${config.home.homeDirectory}/Desktop";
+      documents = "${config.home.homeDirectory}/Documents";
+      download = "${config.home.homeDirectory}/Downloads";
+      music = "${config.home.homeDirectory}/Music";
+      pictures = "${config.home.homeDirectory}/Pictures";
+      projects = "${config.home.homeDirectory}/projects";
+      publicShare = null;
+      templates = null;
+      videos = "${config.home.homeDirectory}/Videos";
     };
 
     configFile = {
