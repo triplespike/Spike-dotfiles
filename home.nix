@@ -198,6 +198,11 @@ EOF
 
     mv "$GHOSTTY_DIR/theme.conf.tmp" "$GHOSTTY_DIR/theme.conf"
 
+    # Мгновенная перезагрузка палитры во всех запущенных окнах Ghostty через D-Bus
+    for bus_name in $(busctl --user list 2>/dev/null | awk '/ghostty/ {print $1}'); do
+      busctl --user call "$bus_name" /com/mitchellh/ghostty org.gtk.Actions Activate sava{sv} "reload-config" 0 0 >/dev/null 2>&1 || true
+    done
+
     # 5. Сохранение состояния
     echo "$TARGET_ID" > "$STATE_DIR/current"
 
@@ -216,12 +221,12 @@ EOF
     CHOICES="$(${pkgs.jq}/bin/jq -r '.presets[] | "\(.icon) \(.name)\t\(.id)"' "$PRESETS_FILE")"
     CHOICES="$CHOICES"$'\n'"🎲 Случайный сетап (Random)\trandom"
 
-    SELECTED="$(printf '%s\n' "$CHOICES" | cut -f1 | noctalia dmenu -p "Выберите тему оформления:" || true)"
+    SELECTED="$(printf '%s\n' "$CHOICES" | cut -f1 | noctalia dmenu -p "Выберите тему оформления:" | tr -d '\r\n' || true)"
     if [ -z "$SELECTED" ]; then
       exit 0
     fi
 
-    TARGET_ID="$(printf '%s\n' "$CHOICES" | grep -F "$SELECTED" | cut -f2 | head -n 1)"
+    TARGET_ID="$(printf '%s\n' "$CHOICES" | grep -F "$SELECTED" | cut -f2 | tr -d '\r\n' | head -n 1)"
 
     if [ "$TARGET_ID" = "random" ]; then
       theme-random
@@ -743,25 +748,25 @@ in
       interactiveShellInit = ''
         set -g fish_greeting ""
 
-        # Подсветка синтаксиса Fish в космическом стиле Nullscapes
-        set -g fish_color_normal E8EDFF
-        set -g fish_color_command 678FE4 --bold
-        set -g fish_color_keyword AB66CC --bold
-        set -g fish_color_quote 7DCFFF
-        set -g fish_color_redirection E8EDFF
-        set -g fish_color_end AB66CC
-        set -g fish_color_error FD4663 --bold
-        set -g fish_color_param E8EDFF
-        set -g fish_color_comment 46516F
-        set -g fish_color_selection --background=344879
-        set -g fish_color_search_match --background=344879
-        set -g fish_color_operator AB66CC
-        set -g fish_color_escape 7DCFFF
-        set -g fish_color_autosuggestion 46516F
-        set -g fish_color_cwd 678FE4
-        set -g fish_color_user 678FE4
-        set -g fish_color_host AB66CC
-        set -g fish_color_cancel FD4663
+        # Адаптивная подсветка синтаксиса Fish под активную тему терминала
+        set -g fish_color_normal normal
+        set -g fish_color_command blue --bold
+        set -g fish_color_keyword magenta --bold
+        set -g fish_color_quote cyan
+        set -g fish_color_redirection normal
+        set -g fish_color_end magenta
+        set -g fish_color_error red --bold
+        set -g fish_color_param normal
+        set -g fish_color_comment brblack
+        set -g fish_color_selection --background=brblack
+        set -g fish_color_search_match --background=brblack
+        set -g fish_color_operator magenta
+        set -g fish_color_escape cyan
+        set -g fish_color_autosuggestion brblack
+        set -g fish_color_cwd blue
+        set -g fish_color_user blue
+        set -g fish_color_host magenta
+        set -g fish_color_cancel red
 
         fastfetch
       '';
