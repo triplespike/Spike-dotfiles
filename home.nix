@@ -389,6 +389,7 @@ in
         keybind = [
           "shift+insert=paste_from_clipboard"
           "ctrl+v=paste_from_clipboard"
+          "ctrl+,=unbind"
         ];
         clipboard-read = "allow";
         clipboard-paste-protection = false;
