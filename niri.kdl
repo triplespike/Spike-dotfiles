@@ -272,7 +272,7 @@
 
       // Автоматические плавающие окна для системных утилит и медиа
       window-rule {
-          match app-id="(?i).*(pavucontrol|satty|blueman-manager|gpu-screen-recorder|org.gnome.Loupe|nm-connection-editor).*"
+          match app-id="(?i).*(pavucontrol|satty|blueman-manager|gpu-screen-recorder|org.gnome.Loupe|nm-connection-editor|theme_menu_gui|theme-menu).*"
           open-floating true
       }
 
