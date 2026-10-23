@@ -272,8 +272,32 @@ class ThemeMenuApp(Adw.Application):
         thumb_frame.set_size_request(210, 118)
 
         fallback_img = preset.get("wallpaper", {}).get("fallback_image", "")
+        thumb_path = None
         if fallback_img and os.path.exists(fallback_img):
-            pic = Gtk.Picture.new_for_filename(fallback_img)
+            cache_dir = os.path.expanduser("~/.cache/theme-manager/thumbnails")
+            os.makedirs(cache_dir, exist_ok=True)
+            c_file = os.path.join(cache_dir, f"{p_id}.jpg")
+            need_gen = not os.path.exists(c_file)
+            if not need_gen:
+                try:
+                    if os.path.getmtime(fallback_img) > os.path.getmtime(c_file):
+                        need_gen = True
+                except Exception:
+                    need_gen = True
+            if need_gen:
+                try:
+                    from PIL import Image
+                    im = Image.open(fallback_img)
+                    im.resize((240, 135), Image.Resampling.LANCZOS).convert("RGB").save(c_file, "JPEG", quality=85)
+                except Exception:
+                    pass
+            if os.path.exists(c_file):
+                thumb_path = c_file
+            else:
+                thumb_path = fallback_img
+
+        if thumb_path and os.path.exists(thumb_path):
+            pic = Gtk.Picture.new_for_filename(thumb_path)
             pic.set_content_fit(Gtk.ContentFit.COVER)
             pic.set_size_request(210, 118)
             thumb_frame.append(pic)
