@@ -111,8 +111,22 @@ let
       if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
         noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
       fi
+
+      EXTRA_WE_ARGS=()
+      while IFS= read -r arg; do
+        if [ -n "$arg" ]; then
+          EXTRA_WE_ARGS+=("$arg")
+        fi
+      done < <(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.args[]?' 2>/dev/null || true)
+
+      while IFS="=" read -r prop_key prop_val; do
+        if [ -n "$prop_key" ]; then
+          EXTRA_WE_ARGS+=("--set-property" "$prop_key=$prop_val")
+        fi
+      done < <(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.properties | to_entries[]? | "\(.key)=\(.value)"' 2>/dev/null || true)
+
       systemd-run --user --unit=theme-wallpaper-engine \
-        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing >/dev/null 2>&1
+        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing "''${EXTRA_WE_ARGS[@]}" >/dev/null 2>&1
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
       WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
       stop_wallpapers
@@ -210,6 +224,10 @@ EOF
     ${pkgs.libnotify}/bin/notify-send -a "Theme Manager" -i preferences-desktop-theme "Тема применена" "$ICON $NAME" >/dev/null 2>&1 || true
   '';
 
+  themePython = pkgs.python3.withPackages (ps: with ps; [
+    pygobject3
+  ]);
+
   themeMenu = pkgs.writeShellScriptBin "theme-menu" ''
     set -euo pipefail
 
@@ -218,40 +236,20 @@ EOF
       theme-restore --init-only || true
     fi
 
-    CHOICES="$(${pkgs.jq}/bin/jq -r '.presets[] | "\(.icon) \(.name)\t\(.id)"' "$PRESETS_FILE")"
-    CHOICES="$CHOICES"$'\n'"🎲 Случайный сетап (Random)\trandom"
+    GUI_SCRIPT="$HOME/Spike-dotfiles/scripts/theme-menu-gui.py"
+    if [ -f "$GUI_SCRIPT" ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
+      exec ${themePython}/bin/python3 "$GUI_SCRIPT" "$@"
+    fi
 
+    CHOICES="$(${pkgs.jq}/bin/jq -r '.presets[] | "\(.icon) \(.name)\t\(.id)"' "$PRESETS_FILE")"
     SELECTED="$(printf '%s\n' "$CHOICES" | cut -f1 | noctalia dmenu -p "Выберите тему оформления:" | tr -d '\r\n' || true)"
     if [ -z "$SELECTED" ]; then
       exit 0
     fi
 
     TARGET_ID="$(printf '%s\n' "$CHOICES" | grep -F "$SELECTED" | cut -f2 | tr -d '\r\n' | head -n 1)"
-
-    if [ "$TARGET_ID" = "random" ]; then
-      theme-random
-    elif [ -n "$TARGET_ID" ]; then
+    if [ -n "$TARGET_ID" ]; then
       theme-apply "$TARGET_ID"
-    fi
-  '';
-
-  themeRandom = pkgs.writeShellScriptBin "theme-random" ''
-    set -euo pipefail
-
-    PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
-    STATE_DIR="$HOME/.local/state/theme-manager"
-
-    CURRENT=""
-    if [ -f "$STATE_DIR/current" ]; then
-      CURRENT="$(cat "$STATE_DIR/current")"
-    fi
-
-    IDS="$(${pkgs.jq}/bin/jq -r '.presets[].id' "$PRESETS_FILE")"
-    FILTERED="$(printf '%s\n' "$IDS" | grep -v "^''${CURRENT}$" || printf '%s\n' "$IDS")"
-    RANDOM_ID="$(printf '%s\n' "$FILTERED" | ${pkgs.coreutils}/bin/shuf -n 1)"
-
-    if [ -n "$RANDOM_ID" ]; then
-      theme-apply "$RANDOM_ID"
     fi
   '';
 
@@ -315,7 +313,10 @@ in
         numpy
         onnxruntime
         pillow
+        pygobject3
       ]))
+      libadwaita
+      gtk4
       wget
       wf-recorder
 
@@ -352,7 +353,6 @@ in
       libnotify
       themeApply
       themeMenu
-      themeRandom
       themeRestore
     ];
 
