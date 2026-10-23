@@ -126,7 +126,7 @@ let
       done < <(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.properties | to_entries[]? | "\(.key)=\(.value)"' 2>/dev/null || true)
 
       systemd-run --user --unit=theme-wallpaper-engine \
-        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --clamp repeat --volume 0 --silent --no-audio-processing "''${EXTRA_WE_ARGS[@]}" >/dev/null 2>&1
+        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --clamp clamp --volume 0 --silent --no-audio-processing "''${EXTRA_WE_ARGS[@]}" >/dev/null 2>&1
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
       WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
       stop_wallpapers
