@@ -5,3 +5,7 @@
 result
 result-*
 .direnv
+
+# Python bytecode
+__pycache__/
+*.pyc
