@@ -228,8 +228,22 @@ EOF
     pygobject3
   ]);
 
+  themeTypelibPath = pkgs.lib.makeSearchPath "lib/girepository-1.0" [
+    pkgs.libadwaita
+    pkgs.gtk4
+    pkgs.pango
+    pkgs.graphene
+    pkgs.harfbuzz
+    pkgs.gdk-pixbuf
+    pkgs.glib
+    pkgs.gobject-introspection
+  ];
+
   themeMenu = pkgs.writeShellScriptBin "theme-menu" ''
     set -euo pipefail
+
+    export GSK_RENDERER="gl"
+    export GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
 
     PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
     if [ ! -f "$PRESETS_FILE" ]; then

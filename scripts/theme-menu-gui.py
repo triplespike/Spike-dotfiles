@@ -7,6 +7,27 @@ palette previews, keyboard and mouse navigation.
 
 import os
 import sys
+
+# Force OpenGL renderer for GTK4 on NVIDIA Wayland (avoids Vulkan swapchain out of date bug)
+os.environ["GSK_RENDERER"] = "gl"
+
+# Fallback GI_TYPELIB_PATH if not set by wrapper
+if "GI_TYPELIB_PATH" not in os.environ or "Adw" not in os.environ["GI_TYPELIB_PATH"]:
+    fallback_paths = [
+        "/home/spike/.local/state/nix/profiles/home-manager/home-path/lib/girepository-1.0",
+        "/run/current-system/sw/lib/girepository-1.0",
+        "/nix/store/3dkd54d9711xghg7lq799ii9vwdmwwqa-libadwaita-1.9.3/lib/girepository-1.0",
+        "/nix/store/0bxxqghpd81agcp6ncz5d0rn3y4axk56-gtk4-4.22.4/lib/girepository-1.0",
+        "/nix/store/jxvb2w9s84m7g7iy5zcf6a9nq73bxqc3-pango-1.57.1/lib/girepository-1.0",
+        "/nix/store/6258qrsicd2vjcqfwq1pc5zn2hdpf73l-graphene-1.10.8/lib/girepository-1.0",
+        "/nix/store/z0ifv8wqq931phdxq7nl0r0xssprnh97-harfbuzz-13.2.1/lib/girepository-1.0",
+        "/nix/store/ki6hf4l2l5i6rp2m2vhkr492r627msl8-gdk-pixbuf-2.44.8/lib/girepository-1.0",
+        "/nix/store/3dkchpfn8r3ipsccl1001xhcl5smfjdx-glib-2.88.3/lib/girepository-1.0",
+        "/nix/store/sgcqy1rm7rkl076mq1x7c76ab233ggxz-gobject-introspection-1.86.0/lib/girepository-1.0",
+    ]
+    existing = os.environ.get("GI_TYPELIB_PATH", "")
+    os.environ["GI_TYPELIB_PATH"] = ":".join(fallback_paths) + (f":{existing}" if existing else "")
+
 import json
 import subprocess
 import gi
@@ -123,7 +144,7 @@ def apply_theme(preset_id, app):
 
 class ThemeMenuApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.spike.theme_menu_gui", flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        super().__init__(application_id="com.spike.theme_menu_gui", flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.presets = []
         self.current_theme = ""
         self.card_buttons = []
@@ -221,11 +242,15 @@ class ThemeMenuApp(Adw.Application):
 
         win.present()
 
-        # Focus active theme card
+        # Focus active theme card safely (must return False / SOURCE_REMOVE to avoid infinite busy-loop)
+        def _focus_initial(widget):
+            widget.grab_focus()
+            return False
+
         if initial_child:
-            GLib.idle_add(lambda: initial_child.grab_focus())
+            GLib.idle_add(_focus_initial, initial_child)
         elif self.card_buttons:
-            GLib.idle_add(lambda: self.card_buttons[0][1].grab_focus())
+            GLib.idle_add(_focus_initial, self.card_buttons[0][1])
 
     def create_theme_card(self, preset, index):
         p_id = preset.get("id", "")
@@ -344,11 +369,13 @@ class ThemeMenuApp(Adw.Application):
 
         # Enter / Space on focused card
         if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space):
-            focused = self.get_active_window().get_focus()
-            for p_id, btn in self.card_buttons:
-                if focused == btn or (focused and btn.is_ancestor(focused)):
-                    apply_theme(p_id, self)
-                    return True
+            win = self.get_active_window()
+            if win:
+                focused = win.get_focus()
+                for p_id, btn in self.card_buttons:
+                    if focused == btn or (focused and btn.is_ancestor(focused)):
+                        apply_theme(p_id, self)
+                        return True
 
         return False
 
