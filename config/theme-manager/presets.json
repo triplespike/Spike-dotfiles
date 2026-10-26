@@ -1,0 +1,525 @@
+{
+  "presets": [
+    {
+      "id": "nullscapes",
+      "name": "Nullscapes (Cosmic Neon)",
+      "icon": "🌌",
+      "wallpaper": {
+        "type": "video",
+        "path": "/home/spike/.local/share/Steam/steamapps/workshop/content/431960/3741021206/NULLSCAPES WALLPAPER NOTEXT.mp4",
+        "screen": "HDMI-A-1",
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/nullscapes.png"
+      },
+      "noctalia": {
+        "source": "custom",
+        "palette": "Nullscapes"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#678FE4",
+          "to": "#AB66CC",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#678FE4",
+          "to": "#AB66CC",
+          "angle": 90,
+          "inactive": "#1B243788"
+        },
+        "shadow": "#050711cc",
+        "overview_backdrop": "#080B16dd"
+      },
+      "ghostty": {
+        "background": "080B16",
+        "foreground": "E8EDFF",
+        "cursor_color": "#A8B7FF",
+        "selection_background": "#344879",
+        "selection_foreground": "#FFFFFF",
+        "palette": [
+          "0=#080B16",
+          "1=#FD4663",
+          "2=#678FE4",
+          "3=#E0AF68",
+          "4=#678FE4",
+          "5=#AB66CC",
+          "6=#82B8E8",
+          "7=#E8EDFF",
+          "8=#46516F",
+          "9=#FF6B8B",
+          "10=#7DCFFF",
+          "11=#F1F3FF",
+          "12=#829AFF",
+          "13=#C77DFF",
+          "14=#AED8FF",
+          "15=#FFFFFF"
+        ]
+      },
+      "lavat": {
+        "color": "678FE4",
+        "rim": "AB66CC"
+      },
+      "cava": {
+        "gradient": [
+          "#678FE4",
+          "#715CD6",
+          "#8A91E8",
+          "#AB66CC",
+          "#FD4663"
+        ]
+      }
+    },
+    {
+      "id": "tokyo-night",
+      "name": "Tokyo Night (Star Bearing Dreams)",
+      "icon": "🌃",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "3463280673",
+        "screen": "HDMI-A-1",
+        "args": [
+          "--disable-mouse",
+          "--disable-parallax"
+        ],
+        "properties": {
+          "hrbigbgeneralcomponentswitch": "0",
+          "time": "0",
+          "day1": "0",
+          "week1": "0",
+          "newproperty46": "0",
+          "newproperty50": "0",
+          "shu": "0",
+          "newproperty32": "0",
+          "newproperty33": "0",
+          "weekdisplaysize": "0",
+          "newproperty53": "0",
+          "x": "-10",
+          "x1": "-10",
+          "x2": "-10",
+          "y": "-10",
+          "y2": "-10",
+          "y3": "-10"
+        },
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/tokyo-night.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Tokyo Night Storm"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#7aa2f7",
+          "to": "#bb9af7",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#7aa2f7",
+          "to": "#bb9af7",
+          "angle": 90,
+          "inactive": "#24283b88"
+        },
+        "shadow": "#16161ecc",
+        "overview_backdrop": "#1a1b26dd"
+      },
+      "ghostty": {
+        "background": "1a1b26",
+        "foreground": "c0caf5",
+        "cursor_color": "#c0caf5",
+        "selection_background": "#283457",
+        "selection_foreground": "#c0caf5",
+        "palette": [
+          "0=#15161e",
+          "1=#f7768e",
+          "2=#9ece6a",
+          "3=#e0af68",
+          "4=#7aa2f7",
+          "5=#bb9af7",
+          "6=#7dcfff",
+          "7=#a9b1d6",
+          "8=#414868",
+          "9=#f7768e",
+          "10=#9ece6a",
+          "11=#e0af68",
+          "12=#7aa2f7",
+          "13=#bb9af7",
+          "14=#7dcfff",
+          "15=#c0caf5"
+        ]
+      },
+      "lavat": {
+        "color": "7aa2f7",
+        "rim": "bb9af7"
+      },
+      "cava": {
+        "gradient": [
+          "#7aa2f7",
+          "#7dcfff",
+          "#b4f9f8",
+          "#bb9af7",
+          "#f7768e"
+        ]
+      }
+    },
+    {
+      "id": "catppuccin",
+      "name": "Catppuccin Mocha (Angled Waves)",
+      "icon": "☕",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "2947302287",
+        "screen": "HDMI-A-1",
+        "args": [
+          "--clamp",
+          "clamp",
+          "--disable-mouse",
+          "--disable-parallax"
+        ],
+        "properties": {
+          "backgroundcolor": "0.117647 0.117647 0.180392",
+          "layer1color": "0.580392 0.886275 0.835294",
+          "layer2color": "0.537255 0.862745 0.921569",
+          "layer3color": "0.454902 0.780392 0.925490",
+          "layer4color": "0.537255 0.705882 0.980392",
+          "layer5color": "0.705882 0.745098 0.996078",
+          "layer6color": "0.796078 0.650980 0.968627",
+          "layer7color": "0.192157 0.196078 0.266667",
+          "audioresponsive": "0",
+          "clock": "0",
+          "date": "0"
+        },
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/catppuccin.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Catppuccin Mocha Mauve-Lavender"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#cba6f7",
+          "to": "#b4befe",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#cba6f7",
+          "to": "#b4befe",
+          "angle": 90,
+          "inactive": "#31324488"
+        },
+        "shadow": "#11111bcc",
+        "overview_backdrop": "#181825dd"
+      },
+      "ghostty": {
+        "background": "1e1e2e",
+        "foreground": "cdd6f4",
+        "cursor_color": "#f5e0dc",
+        "selection_background": "#45475a",
+        "selection_foreground": "#cdd6f4",
+        "palette": [
+          "0=#45475a",
+          "1=#f38ba8",
+          "2=#a6e3a1",
+          "3=#f9e2af",
+          "4=#89b4fa",
+          "5=#f5c2e7",
+          "6=#94e2d5",
+          "7=#bac2de",
+          "8=#585b70",
+          "9=#f38ba8",
+          "10=#a6e3a1",
+          "11=#f9e2af",
+          "12=#89b4fa",
+          "13=#f5c2e7",
+          "14=#94e2d5",
+          "15=#a6adc8"
+        ]
+      },
+      "lavat": {
+        "color": "cba6f7",
+        "rim": "b4befe"
+      },
+      "cava": {
+        "gradient": [
+          "#89b4fa",
+          "#74c7ec",
+          "#89dceb",
+          "#cba6f7",
+          "#f38ba8"
+        ]
+      }
+    },
+    {
+      "id": "cyberpunk",
+      "name": "Cyberpunk 2077 (Cozy City Loft)",
+      "icon": "⚡",
+      "wallpaper": {
+        "type": "video",
+        "path": "/mnt/storage/SteamLibrary/steamapps/workshop/content/431960/3332060962/CozyCyberpunkLoft_4K_cc2023.mp4",
+        "screen": "HDMI-A-1",
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/cyberpunk.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Cyberpunk"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#ff003c",
+          "to": "#fcee0a",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#ff003c",
+          "to": "#fcee0a",
+          "angle": 90,
+          "inactive": "#20202888"
+        },
+        "shadow": "#000000cc",
+        "overview_backdrop": "#0b0c10dd"
+      },
+      "ghostty": {
+        "background": "0d0d11",
+        "foreground": "ff3355",
+        "cursor_color": "#ff003c",
+        "selection_background": "#ff003c",
+        "selection_foreground": "#0d0d11",
+        "palette": [
+          "0=#101015",
+          "1=#ff003c",
+          "2=#00ff9f",
+          "3=#fcee0a",
+          "4=#ff003c",
+          "5=#ab66cc",
+          "6=#00f0ff",
+          "7=#e8edff",
+          "8=#303040",
+          "9=#ff0055",
+          "10=#20ffa5",
+          "11=#ffe600",
+          "12=#ff2a5f",
+          "13=#d400ff",
+          "14=#00ffff",
+          "15=#ffffff"
+        ]
+      },
+      "lavat": {
+        "color": "ff003c",
+        "rim": "fcee0a"
+      },
+      "cava": {
+        "gradient": [
+          "#00f0ff",
+          "#00ff9f",
+          "#fcee0a",
+          "#ff003c",
+          "#ff0055"
+        ]
+      }
+    },
+    {
+      "id": "nord-aurora",
+      "name": "Nord Aurora (Aurora Winter)",
+      "icon": "❄️",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "2688582860",
+        "screen": "HDMI-A-1",
+        "args": [
+          "--disable-mouse"
+        ],
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/nord-aurora.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Nord Aurora"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#88c0d0",
+          "to": "#81a1c1",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#88c0d0",
+          "to": "#81a1c1",
+          "angle": 90,
+          "inactive": "#3b425288"
+        },
+        "shadow": "#242933cc",
+        "overview_backdrop": "#2e3440dd"
+      },
+      "ghostty": {
+        "background": "2e3440",
+        "foreground": "d8dee9",
+        "cursor_color": "#eceff4",
+        "selection_background": "#4c566a",
+        "selection_foreground": "#eceff4",
+        "palette": [
+          "0=#3b4252",
+          "1=#bf616a",
+          "2=#a3be8c",
+          "3=#ebcb8b",
+          "4=#81a1c1",
+          "5=#b48ead",
+          "6=#88c0d0",
+          "7=#e5e9f0",
+          "8=#4c566a",
+          "9=#bf616a",
+          "10=#a3be8c",
+          "11=#ebcb8b",
+          "12=#81a1c1",
+          "13=#b48ead",
+          "14=#8fbcbb",
+          "15=#eceff4"
+        ]
+      },
+      "lavat": {
+        "color": "88c0d0",
+        "rim": "81a1c1"
+      },
+      "cava": {
+        "gradient": [
+          "#81a1c1",
+          "#88c0d0",
+          "#8fbcbb",
+          "#a3be8c",
+          "#b48ead"
+        ]
+      }
+    },
+    {
+      "id": "shardscapes",
+      "name": "Shardscapes (Graphite Charcoal)",
+      "icon": "💎",
+      "wallpaper": {
+        "type": "video",
+        "path": "/home/spike/.local/share/Steam/steamapps/workshop/content/431960/3303795013/Shardscapes.mp4",
+        "screen": "HDMI-A-1",
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/shardscapes.png"
+      },
+      "noctalia": {
+        "source": "custom",
+        "palette": "Shardscapes"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#3d444f",
+          "to": "#5a6473",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#3d444f",
+          "to": "#5a6473",
+          "angle": 90,
+          "inactive": "#16191f88"
+        },
+        "shadow": "#05070acc",
+        "overview_backdrop": "#0a0d12dd"
+      },
+      "ghostty": {
+        "background": "0f1216",
+        "foreground": "ccd3de",
+        "cursor_color": "#6a7687",
+        "selection_background": "#252b36",
+        "selection_foreground": "#ffffff",
+        "palette": [
+          "0=#0f1216",
+          "1=#d95763",
+          "2=#7e997a",
+          "3=#c29d62",
+          "4=#5a6b82",
+          "5=#7d6e8d",
+          "6=#5c7c8a",
+          "7=#ccd3de",
+          "8=#262c37",
+          "9=#e56874",
+          "10=#8fae8a",
+          "11=#d1ac6e",
+          "12=#6a7e99",
+          "13=#907fa3",
+          "14=#6b8f9e",
+          "15=#ffffff"
+        ]
+      },
+      "lavat": {
+        "color": "5a6473",
+        "rim": "a0b2cc"
+      },
+      "cava": {
+        "gradient": [
+          "#3d444f",
+          "#4f5968",
+          "#5a6473",
+          "#79879c",
+          "#a0b2cc"
+        ]
+      }
+    },
+    {
+      "id": "medieval",
+      "name": "Medieval Grim (Dark Fantasy)",
+      "icon": "⚔️",
+      "wallpaper": {
+        "type": "video",
+        "path": "/home/spike/Spike-dotfiles/assets/wallpapers/medieval.mp4",
+        "screen": "HDMI-A-1",
+        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/medieval.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Gruvbox Material Hard"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#d0643b",
+          "to": "#e5a967",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#d0643b",
+          "to": "#e5a967",
+          "angle": 90,
+          "inactive": "#28282888"
+        },
+        "shadow": "#141414cc",
+        "overview_backdrop": "#1d2021dd"
+      },
+      "ghostty": {
+        "background": "141617",
+        "foreground": "d4be98",
+        "cursor_color": "#e5a967",
+        "selection_background": "#32302f",
+        "selection_foreground": "#d4be98",
+        "palette": [
+          "0=#141617",
+          "1=#ea6962",
+          "2=#a9b665",
+          "3=#d8a657",
+          "4=#7daea3",
+          "5=#d3869b",
+          "6=#89b482",
+          "7=#d4be98",
+          "8=#3c3836",
+          "9=#ea6962",
+          "10=#a9b665",
+          "11=#d8a657",
+          "12=#7daea3",
+          "13=#d3869b",
+          "14=#89b482",
+          "15=#dfbf8e"
+        ]
+      },
+      "lavat": {
+        "color": "d0643b",
+        "rim": "e5a967"
+      },
+      "cava": {
+        "gradient": [
+          "#d0643b",
+          "#e5a967",
+          "#ebcb8b",
+          "#bf616a",
+          "#d08770"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+--- a/src/shell/launcher/launcher_panel.h
++++ b/src/shell/launcher/launcher_panel.h
+@@ -120,6 +120,7 @@
+   void setActiveCategorySlot(std::size_t slotIndex);
+   void setActiveBrowserCategory(std::size_t categoryIndex);
+   void applyActiveCategory();
++  bool switchNavigationTab(int direction);
+   void syncLauncherListStyle();
+   void syncLauncherViewLayout(Renderer* renderer = nullptr);
+   void queueResultsTransition(ResultsTransition transition);
+--- a/src/shell/launcher/launcher_panel.cpp
++++ b/src/shell/launcher/launcher_panel.cpp
+@@ -3062,6 +3062,34 @@
+   applyActiveCategory();
+ }
+ 
++bool LauncherPanel::switchNavigationTab(int direction) {
++  if (m_browserMode) {
++    const std::size_t numSlots = m_categoryFilterSlots.size();
++    if (numSlots == 0) {
++      return false;
++    }
++    const std::size_t totalTabs = numSlots + 1;
++    const std::size_t currentTab = m_showingProviderOverview ? numSlots : m_activeCategorySlotIndex;
++    const std::size_t nextTab = (currentTab + totalTabs + (direction > 0 ? 1 : totalTabs - 1)) % totalTabs;
++    if (nextTab < numSlots) {
++      setActiveCategorySlot(nextTab);
++    } else {
++      showProviderOverview();
++    }
++    return true;
++  }
++
+   if (!m_categoryFilterSlots.empty()) {
+     const std::size_t totalSlots = m_categoryFilterSlots.size();
+     const std::size_t nextSlot =
+         (m_activeCategorySlotIndex + totalSlots + (direction > 0 ? 1 : totalSlots - 1)) % totalSlots;
+     setActiveCategorySlot(nextSlot);
+     return true;
+   }
+ 
+   return false;
+ }
+ 
+ void LauncherPanel::updateCategorySelectionChrome() {
+   if (m_launcherNavigation != nullptr && !m_categoryFilterSlots.empty()) {
+     const std::size_t selectedIndex =
+@@ -3609,6 +3637,46 @@
+     return true;
+   }
+ 
++  const std::string providerPrefix = m_config != nullptr ? m_config->config().shell.launcher.providerPrefix : "/";
++  const bool isOverviewQuery = m_showingProviderOverview && (m_query == providerPrefix);
++  const bool canSwitchTabWithPlainArrow = m_query.empty() || isOverviewQuery;
++
++  if (m_browserMode && m_activeCategoryType == Category && !m_currentCategories.empty()) {
++    const bool shiftLeft = (modifiers & KeyMod::Shift) != 0 && KeySymbol::isLeft(sym);
++    const bool shiftRight = (modifiers & KeyMod::Shift) != 0 && KeySymbol::isRight(sym);
++    if (shiftLeft || shiftRight) {
++      auto it = std::ranges::find(m_currentCategories, m_activeCategory, &LauncherCategory::label);
++      const std::size_t curIdx = (it == m_currentCategories.end())
++          ? 0
++          : static_cast<std::size_t>(it - m_currentCategories.begin());
++      const std::size_t total = m_currentCategories.size();
++      const std::size_t nextIdx = (curIdx + total + (shiftRight ? 1 : total - 1)) % total;
++      setActiveBrowserCategory(nextIdx);
++      return true;
++    }
++  }
++
++  const bool ctrlOrAltLeft = ((modifiers & (KeyMod::Ctrl | KeyMod::Alt)) != 0 && KeySymbol::isLeft(sym));
++  const bool ctrlOrAltRight = ((modifiers & (KeyMod::Ctrl | KeyMod::Alt)) != 0 && KeySymbol::isRight(sym));
++
++  if (ctrlOrAltLeft
++      || (!gridNav && !sectionNav && canSwitchTabWithPlainArrow
++          && (KeybindMatcher::matches(KeybindAction::Left, sym, modifiers)
++              || (KeySymbol::isLeft(sym) && (modifiers == 0))))) {
++    if (switchNavigationTab(-1)) {
++      return true;
++    }
++  }
++
++  if (ctrlOrAltRight
++      || (!gridNav && !sectionNav && canSwitchTabWithPlainArrow
++          && (KeybindMatcher::matches(KeybindAction::Right, sym, modifiers)
++              || (KeySymbol::isRight(sym) && (modifiers == 0))))) {
++    if (switchNavigationTab(1)) {
++      return true;
++    }
++  }
++
+   if ((gridNav || sectionNav) && KeybindMatcher::matches(KeybindAction::Left, sym, modifiers)) {
+     if (sectionNav) {
+       moveSectionSelection(false, -1, 1);
