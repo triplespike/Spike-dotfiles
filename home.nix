@@ -918,7 +918,7 @@ in
       in {
         logo = {
           type = "kitty-direct";
-          source = "/home/spike/.config/fastfetch/Easy.png";
+          source = "/home/spike/.config/fastfetch/logo.png";
           width = 26;
           height = 13;
           padding = {
