@@ -94,6 +94,7 @@ let
     WP_TYPE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.type // "image"')"
     SCREEN="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.screen // "HDMI-A-1"')"
     FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
+    WALLPAPER_STARTED=1
 
     if [ "$WP_TYPE" = "video" ]; then
       VIDEO_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
@@ -103,18 +104,35 @@ let
       fi
       if [ -n "$VIDEO_PATH" ] && [ -f "$VIDEO_PATH" ]; then
         systemd-run --user --unit=theme-wallpaper-video \
-          ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=nvdec" "$SCREEN" "$VIDEO_PATH" >/dev/null 2>&1
+          ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=nvdec" "$SCREEN" "$VIDEO_PATH" >/dev/null
+        ${pkgs.coreutils}/bin/sleep 0.4
+        if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
+          echo "Не удалось запустить видеообои: $VIDEO_PATH" >&2
+          WALLPAPER_STARTED=0
+        fi
+      else
+        echo "Файл видеообоев не найден: $VIDEO_PATH" >&2
+        WALLPAPER_STARTED=0
       fi
     elif [ "$WP_TYPE" = "wallpaperengine" ]; then
-      WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id')"
+      WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id // ""')"
       stop_wallpapers
       if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
         noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
       fi
 
       EXTRA_WE_ARGS=()
+      CLAMP_MODE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.clamp // "clamp"')"
+      EXTRA_WE_ARGS+=(--clamp "$CLAMP_MODE")
+      skip_clamp_value=0
       while IFS= read -r arg; do
-        if [ -n "$arg" ]; then
+        if [ "$skip_clamp_value" -eq 1 ]; then
+          skip_clamp_value=0
+          continue
+        fi
+        if [ "$arg" = "--clamp" ]; then
+          skip_clamp_value=1
+        elif [ -n "$arg" ]; then
           EXTRA_WE_ARGS+=("$arg")
         fi
       done < <(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.args[]?' 2>/dev/null || true)
@@ -126,13 +144,25 @@ let
       done < <(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.properties | to_entries[]? | "\(.key)=\(.value)"' 2>/dev/null || true)
 
       systemd-run --user --unit=theme-wallpaper-engine \
-        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --clamp clamp --volume 0 --silent --no-audio-processing "''${EXTRA_WE_ARGS[@]}" >/dev/null 2>&1
+        linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --volume 0 --silent --no-audio-processing --noautomute "''${EXTRA_WE_ARGS[@]}" >/dev/null
+      ${pkgs.coreutils}/bin/sleep 0.6
+      if ! systemctl --user is-active --quiet theme-wallpaper-engine.service; then
+        echo "Wallpaper Engine завершился с ошибкой для пресета '$TARGET_ID'; цвета темы не переключены." >&2
+        WALLPAPER_STARTED=0
+      fi
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
       WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
       stop_wallpapers
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
         noctalia msg wallpaper-set "$WP_PATH" >/dev/null 2>&1 || true
+      else
+        echo "Файл обоев не найден: $WP_PATH" >&2
+        WALLPAPER_STARTED=0
       fi
+    fi
+
+    if [ "$WALLPAPER_STARTED" -ne 1 ]; then
+      exit 1
     fi
 
     # 2. Палитра Noctalia
@@ -217,15 +247,129 @@ EOF
       busctl --user call "$bus_name" /com/mitchellh/ghostty org.gtk.Actions Activate sava{sv} "reload-config" 0 0 >/dev/null 2>&1 || true
     done
 
-    # 5. Сохранение состояния
+    # 5. Цвета Cava и Lavat
+    LAVAT_COLOR="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.lavat.color // ""')"
+    LAVAT_RIM="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.lavat.rim // ""')"
+    if [ -z "$LAVAT_COLOR" ]; then
+      LAVAT_COLOR="''${RING_FROM#\#}"
+    fi
+    if [ -z "$LAVAT_RIM" ]; then
+      LAVAT_RIM="''${RING_TO#\#}"
+    fi
+
+    cat << EOF > "$STATE_DIR/lavat.conf.tmp"
+COLOR="$LAVAT_COLOR"
+RIM="$LAVAT_RIM"
+EOF
+    mv "$STATE_DIR/lavat.conf.tmp" "$STATE_DIR/lavat.conf"
+
+    CAVA_1="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.cava.gradient[0] // ""')"
+    CAVA_2="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.cava.gradient[1] // ""')"
+    CAVA_3="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.cava.gradient[2] // ""')"
+    CAVA_4="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.cava.gradient[3] // ""')"
+    CAVA_5="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.cava.gradient[4] // ""')"
+
+    if [ -z "$CAVA_1" ]; then
+      CAVA_1="$RING_FROM"
+      CAVA_2="$RING_FROM"
+      CAVA_3="$RING_TO"
+      CAVA_4="$RING_TO"
+      CAVA_5="$RING_TO"
+    fi
+
+    CAVA_DIR="$HOME/.config/cava"
+    mkdir -p "$CAVA_DIR"
+    if [ -f "$CAVA_DIR/config" ]; then
+      if ! grep -q "^live-config" "$CAVA_DIR/config"; then
+        sed -i 's/\[general\]/\[general\]\nlive-config = 1/' "$CAVA_DIR/config"
+      fi
+      sed -i \
+        -e "s|^gradient_color_1 = .*|gradient_color_1 = '$CAVA_1'|" \
+        -e "s|^gradient_color_2 = .*|gradient_color_2 = '$CAVA_2'|" \
+        -e "s|^gradient_color_3 = .*|gradient_color_3 = '$CAVA_3'|" \
+        -e "s|^gradient_color_4 = .*|gradient_color_4 = '$CAVA_4'|" \
+        -e "s|^gradient_color_5 = .*|gradient_color_5 = '$CAVA_5'|" \
+        "$CAVA_DIR/config"
+      ${pkgs.procps}/bin/pkill -USR1 cava >/dev/null 2>&1 || true
+    fi
+
+    # 6. Цвета btop
+    BTOP_DIR="$HOME/.config/btop"
+    mkdir -p "$BTOP_DIR/themes"
+
+    BTOP_TITLE="$RING_FROM"
+    BTOP_HI="$RING_TO"
+    BTOP_BOX_CPU="$RING_FROM"
+    BTOP_BOX_MEM="$RING_TO"
+    BTOP_BOX_NET="$RING_FROM"
+    BTOP_BOX_PROC="$RING_TO"
+
+    cat << EOF > "$BTOP_DIR/themes/$TARGET_ID.theme.tmp"
+# Dynamically generated by Theme Manager for preset: $TARGET_ID
+theme[main_bg]=""
+theme[main_fg]="#$GH_FG"
+theme[title]="$BTOP_TITLE"
+theme[hi_fg]="$BTOP_HI"
+theme[selected_bg]="$GH_SEL_BG"
+theme[selected_fg]="$GH_SEL_FG"
+theme[inactive_fg]="#616771"
+theme[graph_text]="$BTOP_TITLE"
+theme[meter_bg]="$GH_SEL_BG"
+theme[proc_misc]="$BTOP_HI"
+theme[cpu_box]="$BTOP_BOX_CPU"
+theme[mem_box]="$BTOP_BOX_MEM"
+theme[net_box]="$BTOP_BOX_NET"
+theme[proc_box]="$BTOP_BOX_PROC"
+theme[div_line]="$GH_SEL_BG"
+theme[temp_start]="$CAVA_1"
+theme[temp_mid]="$CAVA_3"
+theme[temp_end]="$CAVA_5"
+theme[cpu_start]="$CAVA_1"
+theme[cpu_mid]="$CAVA_3"
+theme[cpu_end]="$CAVA_4"
+theme[free_start]="$CAVA_4"
+theme[free_mid]="$CAVA_2"
+theme[free_end]="$CAVA_1"
+theme[cached_start]="$CAVA_1"
+theme[cached_mid]="$CAVA_2"
+theme[cached_end]="$CAVA_3"
+theme[available_start]="$CAVA_4"
+theme[available_mid]="$CAVA_2"
+theme[available_end]="$CAVA_1"
+theme[used_start]="$CAVA_1"
+theme[used_mid]="$CAVA_3"
+theme[used_end]="$CAVA_4"
+theme[download_start]="$CAVA_1"
+theme[download_mid]="$CAVA_2"
+theme[download_end]="$CAVA_4"
+theme[upload_start]="$CAVA_4"
+theme[upload_mid]="$CAVA_3"
+theme[upload_end]="$CAVA_1"
+theme[process_start]="$CAVA_1"
+theme[process_mid]="$CAVA_3"
+theme[process_end]="$CAVA_4"
+EOF
+    mv "$BTOP_DIR/themes/$TARGET_ID.theme.tmp" "$BTOP_DIR/themes/$TARGET_ID.theme"
+    cp -f "$BTOP_DIR/themes/$TARGET_ID.theme" "$BTOP_DIR/themes/theme-current.theme"
+
+    if [ -f "$BTOP_DIR/btop.conf" ]; then
+      sed -i 's/^color_theme = .*/color_theme = "'"$TARGET_ID"'"/' "$BTOP_DIR/btop.conf"
+    fi
+    ${pkgs.procps}/bin/pkill -SIGUSR2 btop >/dev/null 2>&1 || true
+
+    # 7. Мгновенная перезагрузка работающих экземпляров лавалампы
+    ${pkgs.procps}/bin/pkill -USR1 -f "/.*bin/lava" >/dev/null 2>&1 || true
+
+    # 8. Сохранение состояния
     echo "$TARGET_ID" > "$STATE_DIR/current"
 
-    # 6. Уведомление
+    # 9. Уведомление
     ${pkgs.libnotify}/bin/notify-send -a "Theme Manager" -i preferences-desktop-theme "Тема применена" "$ICON $NAME" >/dev/null 2>&1 || true
   '';
 
   themePython = pkgs.python3.withPackages (ps: with ps; [
     pygobject3
+    pillow
   ]);
 
   themeTypelibPath = pkgs.lib.makeSearchPath "lib/girepository-1.0" [
@@ -241,6 +385,7 @@ EOF
 
   themeMenu = pkgs.writeShellScriptBin "theme-menu" ''
     set -euo pipefail
+    export PATH="${themeApply}/bin:$PATH"
 
     export GSK_RENDERER="gl"
     export GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
@@ -252,7 +397,10 @@ EOF
 
     GUI_SCRIPT="$HOME/Spike-dotfiles/scripts/theme-menu-gui.py"
     if [ -f "$GUI_SCRIPT" ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
-      exec ${themePython}/bin/python3 "$GUI_SCRIPT" "$@"
+      if ${themePython}/bin/python3 "$GUI_SCRIPT" "$@"; then
+        exit 0
+      fi
+      echo "Графическое меню тем не запустилось; открываю меню Noctalia." >&2
     fi
 
     CHOICES="$(${pkgs.jq}/bin/jq -r '.presets[] | "\(.icon) \(.name)\t\(.id)"' "$PRESETS_FILE")"
@@ -269,6 +417,7 @@ EOF
 
   themeRestore = pkgs.writeShellScriptBin "theme-restore" ''
     set -euo pipefail
+    export PATH="${themeApply}/bin:$PATH"
 
     STATE_DIR="$HOME/.local/state/theme-manager"
     CONFIG_DIR="$HOME/.config/theme-manager"
@@ -279,7 +428,12 @@ EOF
       exit 0
     fi
 
-    ${pkgs.coreutils}/bin/sleep 1.2
+    attempt=0
+    until noctalia msg wallpaper-get HDMI-A-1 >/dev/null 2>&1 || [ "$attempt" -ge 80 ]; do
+      ${pkgs.coreutils}/bin/sleep 0.25
+      attempt=$((attempt + 1))
+    done
+    ${pkgs.coreutils}/bin/sleep 1
 
     CURRENT="nullscapes"
     if [ -f "$STATE_DIR/current" ]; then
@@ -287,6 +441,84 @@ EOF
     fi
 
     theme-apply "$CURRENT" || true
+  '';
+
+  themeLava = pkgs.writeShellScriptBin "lava" ''
+    set -u
+    STATE_DIR="$HOME/.local/state/theme-manager"
+    CONF="$STATE_DIR/lavat.conf"
+
+    CHILD=""
+    WATCHER_PID=""
+    RELOAD=0
+
+    cleanup() {
+      if [ -n "$WATCHER_PID" ]; then
+        kill -TERM "$WATCHER_PID" 2>/dev/null || true
+      fi
+      if [ -n "$CHILD" ]; then
+        kill -TERM "$CHILD" 2>/dev/null || true
+      fi
+      exit 0
+    }
+    trap cleanup INT TERM HUP EXIT
+
+    do_reload() {
+      RELOAD=1
+      if [ -n "$CHILD" ]; then
+        kill -TERM "$CHILD" 2>/dev/null || true
+      fi
+    }
+    trap do_reload USR1
+
+    # Фоновый наблюдатель за обновлением конфигурации темы
+    (
+      LAST_M="$(stat -c %Y "$CONF" 2>/dev/null || echo 0)"
+      while true; do
+        sleep 0.25
+        M="$(stat -c %Y "$CONF" 2>/dev/null || echo 0)"
+        if [ "$M" != "$LAST_M" ]; then
+          LAST_M="$M"
+          kill -USR1 $$ 2>/dev/null || exit 0
+        fi
+      done
+    ) &
+    WATCHER_PID=$!
+
+    while true; do
+      COLOR="678FE4"
+      RIM="AB66CC"
+      if [ -f "$CONF" ]; then
+        # shellcheck disable=SC1090
+        source "$CONF"
+      fi
+
+      RELOAD=0
+
+      # Проверяем, задал ли пользователь цвет вручную
+      HAS_CUSTOM_COLOR=0
+      for arg in "$@"; do
+        if [ "$arg" = "-c" ] || [ "$arg" = "-k" ]; then
+          HAS_CUSTOM_COLOR=1
+          break
+        fi
+      done
+
+      if [ "$HAS_CUSTOM_COLOR" -eq 1 ]; then
+        ${pkgs.lavat}/bin/lavat "$@" &
+      else
+        ${pkgs.lavat}/bin/lavat -g -c "$COLOR" -k "$RIM" -C -G "$@" &
+      fi
+
+      CHILD=$!
+      wait "$CHILD" 2>/dev/null || true
+      CHILD=""
+
+      if [ "$RELOAD" -eq 1 ]; then
+        continue
+      fi
+      break
+    done
   '';
 in
 {
@@ -368,6 +600,8 @@ in
       themeApply
       themeMenu
       themeRestore
+      themeLava
+      lavat
     ];
 
     pointerCursor = {
@@ -662,6 +896,10 @@ in
   programs = {
     bash = {
       enable = true;
+      shellAliases = {
+        lava = "lava";
+        lavat = "lava";
+      };
       initExtra = ''
         fastfetch
       '';
@@ -743,6 +981,8 @@ in
         pls = "sudo";
         cat = "bat --paging=never";
         zen = "zen-beta";
+        lava = "lava";
+        lavat = "lava";
         agy-switch = "agy-accounts switch";
         agy-whoami = "agy-accounts status";
         agy-acc1 = "agy-accounts acc1";
@@ -854,7 +1094,10 @@ in
       package = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
         src = pkgs.applyPatches {
           src = old.src;
-          patches = [ ./patches/noctalia-bar-capsule-blur.patch ];
+          patches = [
+            ./patches/noctalia-bar-capsule-blur.patch
+            ./patches/noctalia-launcher-tab-navigation.patch
+          ];
         };
       });
       settings = {
