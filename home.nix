@@ -910,10 +910,7 @@ in
       settings = let
         width = 52;
         spaces = builtins.concatStringsSep "" (builtins.genList (_: " ") width);
-        border = color: "${color}│${esc}[0m${spaces}${color}│${esc}[${toString (width + 1)}D${esc}[0m";
-        bBlue = border "${esc}[94m";
-        bMag = border "${esc}[95m";
-        bCyan = border "${esc}[96m";
+        border = "${esc}[90m│${esc}[0m${spaces}${esc}[90m│${esc}[${toString (width + 1)}D${esc}[0m";
       in {
         logo = {
           type = "kitty-direct";
@@ -947,90 +944,95 @@ in
               total = "";
               elapsed = "";
             };
+            color = {
+              elapsed = "bright_cyan";
+              total = "bright_black";
+            };
             width = 8;
           };
         };
         modules = [
           {
             type = "custom";
-            format = "${esc}[94m╭─  user ───────────────────────────────────────────╮${esc}[0m";
+            format = "${esc}[90m╭─ ${esc}[1;94m  system${esc}[0;90m ─────────────────────────────────────────╮${esc}[0m";
           }
           {
             type = "os";
-            key = "${bBlue}    os    ";
+            key = "${border}    os    ";
             keyColor = "bright_blue";
             format = "{name} {version-id}";
           }
           {
             type = "kernel";
-            key = "${bBlue}  󰌢  kernel";
+            key = "${border}  󰌢  kernel";
             keyColor = "bright_blue";
             format = "{release}";
           }
           {
             type = "uptime";
-            key = "${bBlue}  󱫐  uptime";
+            key = "${border}  󱫐  uptime";
             keyColor = "bright_blue";
             format = "{?days}{days}д {?}{hours}ч {minutes}м";
           }
           {
             type = "custom";
-            format = "${esc}[95m├─ 󱂬 desktop ────────────────────────────────────────┤${esc}[0m";
+            format = "${esc}[90m├─ ${esc}[1;95m󱂬  desktop${esc}[0;90m ────────────────────────────────────────┤${esc}[0m";
           }
           {
             type = "wm";
-            key = "${bMag}  󰧨  wm    ";
+            key = "${border}  󰧨  wm    ";
             keyColor = "bright_magenta";
             format = "{pretty-name}";
           }
           {
             type = "terminal";
-            key = "${bMag}    term  ";
+            key = "${border}    term  ";
             keyColor = "bright_magenta";
             format = "{pretty-name}";
           }
           {
             type = "shell";
-            key = "${bMag}  󰞷  shell ";
+            key = "${border}  󰞷  shell ";
             keyColor = "bright_magenta";
             format = "{pretty-name}";
           }
           {
             type = "custom";
-            format = "${esc}[96m├─  hardware ───────────────────────────────────────┤${esc}[0m";
+            format = "${esc}[90m├─ ${esc}[1;96m  hardware${esc}[0;90m ───────────────────────────────────────┤${esc}[0m";
           }
           {
             type = "cpu";
-            key = "${bCyan}    cpu   ";
+            key = "${border}    cpu   ";
             keyColor = "bright_cyan";
             format = "{1}";
           }
           {
             type = "gpu";
-            key = "${bCyan}  󰢮  gpu   ";
+            key = "${border}  󰢮  gpu   ";
             keyColor = "bright_cyan";
             format = "{2}";
           }
           {
             type = "memory";
-            key = "${bCyan}  󰘚  ram   ";
+            key = "${border}  󰘚  ram   ";
             keyColor = "bright_cyan";
             format = "{percentage-bar} {used} / {total}";
           }
           {
             type = "disk";
-            key = "${bCyan}  󰋊  disk  ";
+            key = "${border}  󰋊  disk  ";
             keyColor = "bright_cyan";
             folders = "/";
             format = "{size-percentage-bar} {size-used} / {size-total}";
           }
           {
             type = "custom";
-            format = "${esc}[96m╰────────────────────────────────────────────────────╯${esc}[0m";
+            format = "${esc}[90m╰────────────────────────────────────────────────────╯${esc}[0m";
           }
           {
-            type = "custom";
-            format = "   ${esc}[91m󰮯${esc}[0m  ${esc}[92m󰊠${esc}[0m  ${esc}[93m󰊠${esc}[0m  ${esc}[94m󰊠${esc}[0m  ${esc}[95m󰊠${esc}[0m  ${esc}[96m󰊠${esc}[0m  ${esc}[97m󰊠${esc}[0m";
+            type = "colors";
+            symbol = "circle";
+            paddingLeft = 3;
           }
         ];
       };
