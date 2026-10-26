@@ -323,7 +323,7 @@
           Mod+X { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
           // Меню тем оформления (Noctalia dmenu)
-          Mod+Shift+T { spawn "theme-menu"; }
+          Mod+Shift+T { spawn "/home/spike/.local/bin/theme-menu"; }
 
           // ------------------------------------------------------
           //                   Управление окнами
