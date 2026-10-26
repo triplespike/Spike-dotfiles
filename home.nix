@@ -907,7 +907,14 @@ in
 
     fastfetch = {
       enable = true;
-      settings = {
+      settings = let
+        width = 52;
+        spaces = builtins.concatStringsSep "" (builtins.genList (_: " ") width);
+        border = color: "${color}│${esc}[0m${spaces}${color}│${esc}[${toString (width + 1)}D${esc}[0m";
+        bBlue = border "${esc}[94m";
+        bMag = border "${esc}[95m";
+        bCyan = border "${esc}[96m";
+      in {
         logo = {
           type = "kitty-direct";
           source = "/home/spike/.config/fastfetch/Easy.png";
@@ -920,36 +927,111 @@ in
           };
         };
         display = {
-          separator = " 󰅂 ";
+          separator = "  󰅂  ";
           color.separator = "bright_black";
+          percent = {
+            type = 3;
+          };
+          size = {
+            maxPrefix = "GB";
+            ndigits = 1;
+          };
+          bar = {
+            border = {
+              left = "";
+              leftElapsed = "";
+              right = "";
+              rightElapsed = "";
+            };
+            char = {
+              total = "";
+              elapsed = "";
+            };
+            width = 8;
+          };
         };
         modules = [
-          { type = "custom"; format = "${esc}[94m╭─   Система ──────────────────────────────────────${esc}[0m"; }
-          { type = "os"; key = "│   Дистрибутив"; keyColor = "bright_blue"; }
-          { type = "kernel"; key = "│ 󰌢  Ядро       "; keyColor = "bright_blue"; }
-          { type = "uptime"; key = "│ 󱫐  Аптайм     "; keyColor = "bright_blue"; }
           {
-            type = "command";
-            key = "│ 󰔠  Возраст ОС ";
-            keyColor = "bright_blue";
-            text = "echo $(( ($(date +%s) - $(cat ~/.config/fastfetch/install-date 2>/dev/null || stat -c %Y /nix/store 2>/dev/null || stat -c %Y /etc/nixos)) / 86400 )) дней";
+            type = "custom";
+            format = "${esc}[94m╭─  user ───────────────────────────────────────────╮${esc}[0m";
           }
-          { type = "custom"; format = "${esc}[94m╰───────────────────────────────────────────────────${esc}[0m"; }
-          { type = "custom"; format = "${esc}[95m╭─ 󱂬  Десктоп ──────────────────────────────────────${esc}[0m"; }
-          { type = "wm"; key = "│ 󰧨  Композитор "; keyColor = "bright_magenta"; }
-          { type = "terminal"; key = "│   Терминал   "; keyColor = "bright_magenta"; }
-          { type = "shell"; key = "│ 󰞷  Оболочка   "; keyColor = "bright_magenta"; }
-          { type = "display"; key = "│ 󰍹  Монитор    "; keyColor = "bright_magenta"; }
-          { type = "custom"; format = "${esc}[95m╰───────────────────────────────────────────────────${esc}[0m"; }
-          { type = "custom"; format = "${esc}[96m╭─   Аппаратная часть ─────────────────────────────${esc}[0m"; }
-          { type = "cpu"; key = "│   Процессор  "; keyColor = "bright_cyan"; }
-          { type = "gpu"; key = "│ 󰢮  Видеокарта "; keyColor = "bright_cyan"; format = "{1} {2}"; }
-          { type = "memory"; key = "│ 󰘚  Память ОЗУ "; keyColor = "bright_cyan"; }
-          { type = "disk"; key = "│ 󰋊  NVMe (Root)"; folders = "/"; keyColor = "bright_cyan"; }
-          { type = "disk"; key = "│ 󰋊  HDD (Игры) "; folders = "/mnt/storage"; keyColor = "bright_cyan"; }
-          { type = "disk"; key = "│ 󰋊  SSD игровой"; folders = "/mnt/ssd"; keyColor = "bright_cyan"; }
-          { type = "custom"; format = "${esc}[96m╰───────────────────────────────────────────────────${esc}[0m"; }
-          { type = "colors"; symbol = "circle"; paddingLeft = 2; }
+          {
+            type = "os";
+            key = "${bBlue}    os    ";
+            keyColor = "bright_blue";
+            format = "{name} {version-id}";
+          }
+          {
+            type = "kernel";
+            key = "${bBlue}  󰌢  kernel";
+            keyColor = "bright_blue";
+            format = "{release}";
+          }
+          {
+            type = "uptime";
+            key = "${bBlue}  󱫐  uptime";
+            keyColor = "bright_blue";
+            format = "{?days}{days}д {?}{hours}ч {minutes}м";
+          }
+          {
+            type = "custom";
+            format = "${esc}[95m├─ 󱂬 desktop ────────────────────────────────────────┤${esc}[0m";
+          }
+          {
+            type = "wm";
+            key = "${bMag}  󰧨  wm    ";
+            keyColor = "bright_magenta";
+            format = "{pretty-name}";
+          }
+          {
+            type = "terminal";
+            key = "${bMag}    term  ";
+            keyColor = "bright_magenta";
+            format = "{pretty-name}";
+          }
+          {
+            type = "shell";
+            key = "${bMag}  󰞷  shell ";
+            keyColor = "bright_magenta";
+            format = "{pretty-name}";
+          }
+          {
+            type = "custom";
+            format = "${esc}[96m├─  hardware ───────────────────────────────────────┤${esc}[0m";
+          }
+          {
+            type = "cpu";
+            key = "${bCyan}    cpu   ";
+            keyColor = "bright_cyan";
+            format = "{1}";
+          }
+          {
+            type = "gpu";
+            key = "${bCyan}  󰢮  gpu   ";
+            keyColor = "bright_cyan";
+            format = "{2}";
+          }
+          {
+            type = "memory";
+            key = "${bCyan}  󰘚  ram   ";
+            keyColor = "bright_cyan";
+            format = "{percentage-bar} {used} / {total}";
+          }
+          {
+            type = "disk";
+            key = "${bCyan}  󰋊  disk  ";
+            keyColor = "bright_cyan";
+            folders = "/";
+            format = "{size-percentage-bar} {size-used} / {size-total}";
+          }
+          {
+            type = "custom";
+            format = "${esc}[96m╰────────────────────────────────────────────────────╯${esc}[0m";
+          }
+          {
+            type = "custom";
+            format = "   ${esc}[91m󰮯${esc}[0m  ${esc}[92m󰊠${esc}[0m  ${esc}[93m󰊠${esc}[0m  ${esc}[94m󰊠${esc}[0m  ${esc}[95m󰊠${esc}[0m  ${esc}[96m󰊠${esc}[0m  ${esc}[97m󰊠${esc}[0m";
+          }
         ];
       };
     };
