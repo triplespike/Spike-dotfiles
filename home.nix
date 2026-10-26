@@ -908,9 +908,12 @@ in
     fastfetch = {
       enable = true;
       settings = let
-        width = 52;
-        spaces = builtins.concatStringsSep "" (builtins.genList (_: " ") width);
-        border = "${esc}[90m│${esc}[0m${spaces}${esc}[90m│${esc}[${toString (width + 1)}D${esc}[0m";
+        frameColor = "${esc}[94m";
+        sec1Color = "${esc}[94m";
+        sec2Color = "${esc}[95m";
+        sec3Color = "${esc}[96m";
+        bold = "${esc}[1m";
+        reset = "${esc}[0m";
       in {
         logo = {
           type = "kitty-direct";
@@ -954,80 +957,80 @@ in
         modules = [
           {
             type = "custom";
-            format = "${esc}[90m╭─ ${esc}[1;94m  system${esc}[0;90m ─────────────────────────────────────────╮${esc}[0m";
+            format = "${frameColor}╭─ ${bold}${sec1Color}  system${reset}${frameColor} ───────────────────────────────────${reset}";
           }
           {
             type = "os";
-            key = "${border}    os    ";
+            key = "${frameColor}│${reset}    os    ";
             keyColor = "bright_blue";
             format = "{name} {version-id}";
           }
           {
             type = "kernel";
-            key = "${border}  󰌢  kernel";
+            key = "${frameColor}│${reset}  󰌢  kernel";
             keyColor = "bright_blue";
             format = "{release}";
           }
           {
             type = "uptime";
-            key = "${border}  󱫐  uptime";
+            key = "${frameColor}│${reset}  󱫐  uptime";
             keyColor = "bright_blue";
             format = "{?days}{days}д {?}{hours}ч {minutes}м";
           }
           {
             type = "custom";
-            format = "${esc}[90m├─ ${esc}[1;95m󱂬  desktop${esc}[0;90m ────────────────────────────────────────┤${esc}[0m";
+            format = "${frameColor}├─ ${bold}${sec2Color}󱂬  desktop${reset}${frameColor} ──────────────────────────────────${reset}";
           }
           {
             type = "wm";
-            key = "${border}  󰧨  wm    ";
+            key = "${frameColor}│${reset}  󰧨  wm    ";
             keyColor = "bright_magenta";
             format = "{pretty-name}";
           }
           {
             type = "terminal";
-            key = "${border}    term  ";
+            key = "${frameColor}│${reset}    term  ";
             keyColor = "bright_magenta";
             format = "{pretty-name}";
           }
           {
             type = "shell";
-            key = "${border}  󰞷  shell ";
+            key = "${frameColor}│${reset}  󰞷  shell ";
             keyColor = "bright_magenta";
             format = "{pretty-name}";
           }
           {
             type = "custom";
-            format = "${esc}[90m├─ ${esc}[1;96m  hardware${esc}[0;90m ───────────────────────────────────────┤${esc}[0m";
+            format = "${frameColor}├─ ${bold}${sec3Color}  hardware${reset}${frameColor} ─────────────────────────────────${reset}";
           }
           {
             type = "cpu";
-            key = "${border}    cpu   ";
+            key = "${frameColor}│${reset}    cpu   ";
             keyColor = "bright_cyan";
             format = "{1}";
           }
           {
             type = "gpu";
-            key = "${border}  󰢮  gpu   ";
+            key = "${frameColor}│${reset}  󰢮  gpu   ";
             keyColor = "bright_cyan";
             format = "{2}";
           }
           {
             type = "memory";
-            key = "${border}  󰘚  ram   ";
+            key = "${frameColor}│${reset}  󰘚  ram   ";
             keyColor = "bright_cyan";
             format = "{percentage-bar} {used} / {total}";
           }
           {
             type = "disk";
-            key = "${border}  󰋊  disk  ";
+            key = "${frameColor}│${reset}  󰋊  disk  ";
             keyColor = "bright_cyan";
             folders = "/";
             format = "{size-percentage-bar} {size-used} / {size-total}";
           }
           {
             type = "custom";
-            format = "${esc}[90m╰────────────────────────────────────────────────────╯${esc}[0m";
+            format = "${frameColor}╰───────────────────────────────────────────────${reset}";
           }
           {
             type = "colors";
