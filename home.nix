@@ -45,7 +45,12 @@ let
     pgrep -x xwayland-satellite >/dev/null || xwayland-satellite &
     pgrep -x noctalia >/dev/null || noctalia &
 
-    # 4. Восстановление активной темы оформления (Theme Manager)
+    # 4. Демон живой стилизации Antigravity 2.0
+    if [ -x "$HOME/.local/bin/theme-daemon-antigravity" ]; then
+      pgrep -f theme-daemon-antigravity >/dev/null || "$HOME/.local/bin/theme-daemon-antigravity" &
+    fi
+
+    # 5. Восстановление активной темы оформления (Theme Manager)
     ${themeRestore}/bin/theme-restore &
   '';
 
