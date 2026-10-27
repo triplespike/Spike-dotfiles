@@ -231,6 +231,7 @@
           }
       }
 
+
       // Vesktop: нативное прозрачное стекло через Electron transparent с аппаратным блюром (иконки 100% плотные)
       window-rule {
           match app-id="(?i).*vesktop.*"

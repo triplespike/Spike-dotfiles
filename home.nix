@@ -360,7 +360,12 @@ EOF
     # 7. Мгновенная перезагрузка работающих экземпляров лавалампы
     ${pkgs.procps}/bin/pkill -USR1 -f "/.*bin/lava" >/dev/null 2>&1 || true
 
-    # 8. Сохранение состояния
+    # 8. Стилизация Antigravity 2.0 (Agy 2)
+    if [ -x "$HOME/.local/bin/theme-inject-antigravity" ]; then
+      "$HOME/.local/bin/theme-inject-antigravity" "$TARGET_ID" >/dev/null 2>&1 || true
+    fi
+
+    # 9. Сохранение состояния
     echo "$TARGET_ID" > "$STATE_DIR/current"
 
     # 9. Уведомление
@@ -543,6 +548,7 @@ in
       cava
       cbonsai
       antigravity-cli
+      antigravity-hub
       codex
       ffmpeg
       jq
