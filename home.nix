@@ -596,6 +596,7 @@ in
       swaybg
       telegram-desktop
       vesktop
+      vscode
 
       # Инструменты сессии Niri/Wayland
       grim
