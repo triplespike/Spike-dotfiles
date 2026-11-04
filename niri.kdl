@@ -438,6 +438,12 @@
           Mod+Shift+S { spawn "noctalia" "msg" "screenshot-region"; }
           Ctrl+Print  { screenshot-screen; }
           Alt+Print   { screenshot-window; }
+
+          // ------------------------------------------------------
+          //                  OBS Studio Recording
+          // ------------------------------------------------------
+          F9 { spawn "obs-control" "toggle-record"; }
+          F8 { spawn "obs-control" "toggle-pause"; }
       }
 
       // Динамическая тема оформления (управляется theme-manager)

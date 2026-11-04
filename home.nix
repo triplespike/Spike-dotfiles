@@ -88,9 +88,9 @@ let
     stop_wallpapers() {
       systemctl --user stop theme-wallpaper-video.service >/dev/null 2>&1 || true
       systemctl --user stop theme-wallpaper-engine.service >/dev/null 2>&1 || true
-      ${pkgs.procps}/bin/pkill -9 -x linux-wallpaper >/dev/null 2>&1 || true
-      ${pkgs.procps}/bin/pkill -9 -x .mpvpaper-wrapp >/dev/null 2>&1 || true
-      while ${pkgs.procps}/bin/pgrep -x linux-wallpaper >/dev/null 2>&1 || ${pkgs.procps}/bin/pgrep -x .mpvpaper-wrapp >/dev/null 2>&1; do
+      ${pkgs.procps}/bin/pkill -9 -f linux-wallpaperengine >/dev/null 2>&1 || true
+      ${pkgs.procps}/bin/pkill -9 -f mpvpaper >/dev/null 2>&1 || true
+      while ${pkgs.procps}/bin/pgrep -f linux-wallpaperengine >/dev/null 2>&1 || ${pkgs.procps}/bin/pgrep -f mpvpaper >/dev/null 2>&1; do
         ${pkgs.coreutils}/bin/sleep 0.05
       done
     }
@@ -576,6 +576,7 @@ in
       gtk4
       wget
       wf-recorder
+      obs-cmd
 
       # Пользовательские приложения
       inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
@@ -1424,6 +1425,15 @@ in
     zoxide = {
       enable = true;
       enableFishIntegration = true;
+    };
+    obs-studio = {
+      enable = true;
+      plugins = with pkgs.obs-studio-plugins; [
+        wlrobs
+        obs-vaapi
+        obs-vkcapture
+        obs-pipewire-audio-capture
+      ];
     };
 
     mpv = {
