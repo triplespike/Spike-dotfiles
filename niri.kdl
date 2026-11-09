@@ -305,7 +305,6 @@
 
           // Музыкальный плеер Riff (умный переключатель / запуск)
           Mod+M { spawn "riff-toggle"; }
-          Mod+Shift+M { spawn "spotify"; }
 
           // Лаунчер приложений Noctalia (поиск)
           Mod+D { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
