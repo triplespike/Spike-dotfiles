@@ -11,9 +11,6 @@
       loupe
       protonup-qt
 
-      # Communication
-      telegram-desktop
-      vesktop
 
       # File managers (pick one)
       kdePackages.dolphin

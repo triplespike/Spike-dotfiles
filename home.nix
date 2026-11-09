@@ -370,6 +370,11 @@ EOF
       "$HOME/.local/bin/theme-inject-antigravity" "$TARGET_ID" >/dev/null 2>&1 || true
     fi
 
+    # 9. Стилизация Riff Music Player
+    if [ -x "$HOME/.local/bin/theme-inject-riff" ]; then
+      "$HOME/.local/bin/theme-inject-riff" "$TARGET_ID" >/dev/null 2>&1 || true
+    fi
+
     # 9. Сохранение состояния
     echo "$TARGET_ID" > "$STATE_DIR/current"
 
@@ -385,41 +390,92 @@ EOF
   themeTypelibPath = pkgs.lib.makeSearchPath "lib/girepository-1.0" [
     pkgs.libadwaita
     pkgs.gtk4
-    pkgs.pango
+    pkgs.pango.out
     pkgs.graphene
     pkgs.harfbuzz
     pkgs.gdk-pixbuf
-    pkgs.glib
+    pkgs.glib.out
     pkgs.gobject-introspection
   ];
 
   themeMenu = pkgs.writeShellScriptBin "theme-menu" ''
     set -euo pipefail
-    export PATH="${themeApply}/bin:$PATH"
+    export PATH="${themeApply}/bin:${pkgs.rofi}/bin:${pkgs.jq}/bin:$PATH"
 
-    export GSK_RENDERER="gl"
-    export GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
+    # Поддержка явного запуска оригинального GTK4/Adwaita интерфейса через --gui / --adw
+    if [ "''${1:-}" = "--gui" ] || [ "''${1:-}" = "--adw" ]; then
+      export GSK_RENDERER="gl"
+      export GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
+      GUI_SCRIPT="$HOME/Spike-dotfiles/scripts/theme-menu-gui.py"
+      if [ -f "$GUI_SCRIPT" ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
+        exec ${themePython}/bin/python3 "$GUI_SCRIPT"
+      fi
+    fi
 
     PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
     if [ ! -f "$PRESETS_FILE" ]; then
       theme-restore --init-only || true
     fi
 
-    GUI_SCRIPT="$HOME/Spike-dotfiles/scripts/theme-menu-gui.py"
-    if [ -f "$GUI_SCRIPT" ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
-      if ${themePython}/bin/python3 "$GUI_SCRIPT" "$@"; then
-        exit 0
-      fi
-      echo "Графическое меню тем не запустилось; открываю меню Noctalia." >&2
+    if [ ! -f "$PRESETS_FILE" ]; then
+      echo "Файл пресетов не найден: $PRESETS_FILE" >&2
+      exit 1
     fi
 
-    CHOICES="$(${pkgs.jq}/bin/jq -r '.presets[] | "\(.icon) \(.name)\t\(.id)"' "$PRESETS_FILE")"
-    SELECTED="$(printf '%s\n' "$CHOICES" | cut -f1 | noctalia dmenu -p "Выберите тему оформления:" | tr -d '\r\n' || true)"
-    if [ -z "$SELECTED" ]; then
+    STATE_FILE="$HOME/.local/state/theme-manager/current"
+    CURRENT_ID=""
+    if [ -f "$STATE_FILE" ]; then
+      CURRENT_ID="$(${pkgs.coreutils}/bin/cat "$STATE_FILE" 2>/dev/null | tr -d '\r\n' || true)"
+    fi
+
+    CACHE_DIR="$HOME/.cache/theme-manager/thumbnails"
+    mkdir -p "$CACHE_DIR"
+
+    THEME_RASI="$HOME/.config/rofi/theme-selector.rasi"
+    if [ ! -f "$THEME_RASI" ]; then
+      THEME_RASI="${./theme-selector.rasi}"
+    fi
+
+    declare -a IDS
+    ACTIVE_INDEX=-1
+    INDEX=0
+
+    while read -r id; do
+      IDS+=("$id")
+      if [ "$id" = "$CURRENT_ID" ]; then
+        ACTIVE_INDEX=$INDEX
+      fi
+      INDEX=$((INDEX + 1))
+    done < <(${pkgs.jq}/bin/jq -r '.presets[].id' "$PRESETS_FILE")
+
+    ROFI_ARGS=(
+      -dmenu
+      -i
+      -show-icons
+      -format "i"
+      -p "󰔎 Темы"
+      -theme "$THEME_RASI"
+    )
+
+    if [ "$ACTIVE_INDEX" -ge 0 ]; then
+      ROFI_ARGS+=(-selected-row "$ACTIVE_INDEX" -a "$ACTIVE_INDEX")
+    fi
+
+    CHOSEN_INDEX="$(
+      while IFS=$'\t' read -r id name icon fallback; do
+        thumb="$CACHE_DIR/''${id}.jpg"
+        if [ ! -f "$thumb" ] && [ -n "$fallback" ] && [ -f "$fallback" ]; then
+          thumb="$fallback"
+        fi
+        printf '%s  %s\0icon\x1f%s\n' "$icon" "$name" "$thumb"
+      done < <(${pkgs.jq}/bin/jq -r '.presets[] | [ .id, .name, .icon, (.wallpaper.fallback_image // .wallpaper.path // "") ] | @tsv' "$PRESETS_FILE") | ${pkgs.rofi}/bin/rofi "''${ROFI_ARGS[@]}" || true
+    )"
+
+    if [ -z "$CHOSEN_INDEX" ]; then
       exit 0
     fi
 
-    TARGET_ID="$(printf '%s\n' "$CHOICES" | grep -F "$SELECTED" | cut -f2 | tr -d '\r\n' | head -n 1)"
+    TARGET_ID="''${IDS[$CHOSEN_INDEX]:-}"
     if [ -n "$TARGET_ID" ]; then
       theme-apply "$TARGET_ID"
     fi
@@ -558,7 +614,6 @@ in
       ffmpeg
       jq
       nodejs_22
-      opencode
       peaclock
       pipes-rs
       libsecret
@@ -577,8 +632,10 @@ in
       wget
       wf-recorder
       obs-cmd
+      rofi
 
       # Пользовательские приложения
+      (pkgs.callPackage ./pkgs/riff.nix {})
       inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
       bottles
       file-roller
@@ -595,8 +652,6 @@ in
       prismlauncher
       protonup-qt
       swaybg
-      telegram-desktop
-      vesktop
       vscode
 
       # Инструменты сессии Niri/Wayland
@@ -724,6 +779,7 @@ in
           user_pref("layers.acceleration.force-enabled", true);
           user_pref("svg.context-properties.content.enabled", true);
           user_pref("layout.css.color-mix.enabled", true);
+          user_pref("browser.sessionstore.max_windows_undo", 0);
         '';
       };
 
@@ -1594,13 +1650,10 @@ in
         "inode/directory" = "org.kde.dolphin.desktop";
         "text/html" = "zen-beta.desktop";
         "x-scheme-handler/about" = "zen-beta.desktop";
-        "x-scheme-handler/discord" = "vesktop.desktop";
         "x-scheme-handler/file" = "org.kde.dolphin.desktop";
         "x-scheme-handler/http" = "zen-beta.desktop";
         "x-scheme-handler/https" = "zen-beta.desktop";
         "x-scheme-handler/sftp" = "org.kde.dolphin.desktop";
-        "x-scheme-handler/tg" = "org.telegram.desktop.desktop";
-        "x-scheme-handler/tonsite" = "org.telegram.desktop.desktop";
         "x-scheme-handler/unknown" = "zen-beta.desktop";
       };
     };
@@ -1632,77 +1685,11 @@ in
       };
       "niri/config.kdl".force = lib.mkForce true;
       "noctalia/config.toml".force = lib.mkForce true;
-      "user-dirs.dirs".force = lib.mkForce true;
-      "vesktop/settings/quickCss.css" = {
+      "rofi/theme-selector.rasi" = {
+        source = ./theme-selector.rasi;
         force = lib.mkForce true;
-        text = ''
-          /**
-           * @name Nullscapes Cosmic Theme
-           * @description Deep dark cyber/cosmic palette matching system rice
-           */
-
-          :root {
-            /* Backgrounds */
-            --background-primary: #080B16 !important;
-            --background-secondary: #0D1222 !important;
-            --background-secondary-alt: #10162A !important;
-            --background-tertiary: #141B29 !important;
-            --background-floating: #182033 !important;
-            --background-accent: #1B2437 !important;
-            --channeltextarea-background: #141B29 !important;
-            --activity-card-background: #141B29 !important;
-
-            /* Accents */
-            --brand-experiment: #678FE4 !important;
-            --brand-experiment-500: #678FE4 !important;
-            --brand-experiment-560: #577CCE !important;
-            --brand-experiment-600: #496AB8 !important;
-            --accent-color: #678FE4 !important;
-            --button-accent: #678FE4 !important;
-
-            /* Text & Interactive */
-            --text-normal: #E8EDFF !important;
-            --text-muted: #AFB1B6 !important;
-            --header-primary: #FFFFFF !important;
-            --header-secondary: #C8CBE6 !important;
-            --interactive-normal: #C8CBE6 !important;
-            --interactive-hover: #E8EDFF !important;
-            --interactive-active: #FFFFFF !important;
-            --interactive-muted: #616771 !important;
-
-            /* Status & Highlights */
-            --status-danger: #FD4663 !important;
-            --status-positive: #7DCFFF !important;
-            --status-warning: #C8CBE6 !important;
-            --mention-foreground: #678FE4 !important;
-            --mention-background: rgba(103, 143, 228, 0.15) !important;
-          }
-
-          /* Rounded corners under system capsule style */
-          .visual-refresh [class*="channel_"],
-          [class*="member_"],
-          [class*="listItem_"] {
-            border-radius: 10px !important;
-          }
-
-          /* Nullscapes Scrollbars */
-          ::-webkit-scrollbar {
-            width: 8px !important;
-            height: 8px !important;
-          }
-          ::-webkit-scrollbar-track {
-            background: #080B16 !important;
-          }
-          ::-webkit-scrollbar-thumb {
-            background: #1B2437 !important;
-            border-radius: 8px !important;
-            border: 2px solid #080B16 !important;
-          }
-          ::-webkit-scrollbar-thumb:hover {
-            background: #678FE4 !important;
-          }
-        '';
       };
+      "user-dirs.dirs".force = lib.mkForce true;
     };
   };
 }
