@@ -215,12 +215,6 @@
           clip-to-geometry true
       }
 
-      // Telegram Desktop: 42% экрана
-      window-rule {
-          match app-id="(?i).*telegram.*"
-          default-column-width { proportion 0.42; }
-      }
-
       // Spotify: умеренная прозрачность к живым обоям стола и легкий блюр (xray false)
       window-rule {
           match app-id="(?i).*spotify.*"
@@ -231,10 +225,11 @@
           }
       }
 
-
-      // Vesktop: нативное прозрачное стекло через Electron transparent с аппаратным блюром (иконки 100% плотные)
+      // Riff: сквозное прозрачное стекло к рабочему столу с аппаратным блюром Niri (50% экрана)
       window-rule {
-          match app-id="(?i).*vesktop.*"
+          match app-id="(?i).*riff.*"
+          opacity 0.90
+          default-column-width { proportion 0.5; }
           background-effect {
               blur true
               xray false
@@ -249,11 +244,11 @@
           clip-to-geometry true
       }
 
-      // Браузеры (Firefox и Zen Browser) всегда открываются строго на 1-м воркспейсе с шириной 50%
+      // Браузеры (Firefox и Zen Browser): всегда открываются на 100% ширины (с рамками и отступами)
       window-rule {
           match app-id="(?i).*(firefox|zen).*"
           open-on-workspace "1"
-          default-column-width { proportion 0.5; }
+          default-column-width { proportion 1.0; }
           background-effect {
               blur true
               xray false
@@ -308,8 +303,9 @@
           Mod+B { spawn "zen-beta"; }
           Mod+Shift+B { spawn "firefox"; }
 
-          // Музыкальный плеер Spotify
-          Mod+M { spawn "spotify"; }
+          // Музыкальный плеер Riff (умный переключатель / запуск)
+          Mod+M { spawn "riff-toggle"; }
+          Mod+Shift+M { spawn "spotify"; }
 
           // Лаунчер приложений Noctalia (поиск)
           Mod+D { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
@@ -324,7 +320,7 @@
           Mod+X { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
           // Меню тем оформления (Noctalia dmenu)
-          Mod+Shift+T { spawn "/home/spike/.local/bin/theme-menu"; }
+          Mod+Shift+T { spawn "theme-menu"; }
 
           // ------------------------------------------------------
           //                   Управление окнами
