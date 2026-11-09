@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![NixOS](https://img.shields.io/badge/NixOS-Unstable-5277C3?style=for-the-badge&logo=nixos&logoColor=white)](https://nixos.org/)
+[![NixOS](https://img.shields.io/badge/NixOS-100_Days_Milestone-5277C3?style=for-the-badge&logo=nixos&logoColor=white)](https://nixos.org/)
 [![Wayland](https://img.shields.io/badge/Wayland-Niri-FCC624?style=for-the-badge&logo=wayland&logoColor=black)](https://github.com/YaLTeR/niri)
 [![Shell](https://img.shields.io/badge/Shell-Noctalia-678FE4?style=for-the-badge)](https://github.com/noctalia-dev/noctalia)
 [![Terminal](https://img.shields.io/badge/Terminal-Ghostty-FD4663?style=for-the-badge)](https://ghostty.org/)
@@ -14,7 +14,7 @@
 [![License](https://img.shields.io/badge/License-MIT-79B9B5?style=for-the-badge)](LICENSE)
 [![Reddit](https://img.shields.io/badge/Reddit-Showcase-FF4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)
 
-*A dark cosmic / cyberpunk daily-driver rice on NixOS featuring the Niri scroll-compositor and Noctalia shell, inspired by the Nullscapes aesthetic.*
+*A dark cosmic / cyberpunk daily-driver rice on NixOS featuring the Niri scroll-compositor, Noctalia shell, dynamic on-the-fly theme switching, and acrylic blur.*
 
 <br/>
 
@@ -29,38 +29,22 @@
 > [!WARNING]
 > ### ⚠️ Please Read Before Using!
 > 
-> * **First Rice & Beginner Notice:** This is my very first rice and my first public dotfiles repo, shared after posting on [r/unixporn](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/). I'm still learning NixOS, so this configuration is tailored specifically to my personal daily machine.
-> * **DO NOT blindly run `nixos-rebuild switch`:** This repository is **NOT an automated installer** or a universal turn-key OS template. Applying someone else's system configuration directly onto your machine can break your boot, display drivers, or graphical session.
 > * **Hardware-Specific Environment:** These dotfiles are specifically tuned for an **NVIDIA GPU** (proprietary drivers + Wayland buffer limits), AMD CPU, and a single 1080p @ 75Hz display.
+> * **DO NOT blindly run `nixos-rebuild switch`:** This repository is **NOT an automated installer** or a universal turn-key OS template. Applying someone else's system configuration directly onto your machine can break your boot, display drivers, or graphical session.
 > * **No Warranty & No Tech Support:** Everything here is provided strictly **AS-IS**. I take zero responsibility for broken setups, and I cannot provide personal tech support or triage GitHub issues for different hardware or distributions.
-> * **Recommended Approach — Cherry-pick! 🍒:** The best way to use these dotfiles is to browse the configs, take inspiration, and cherry-pick what you like (Noctalia capsule blur, Niri keybindings, Ghostty/Fish styling, Fastfetch art, or Satty screenshot pipeline) into your own existing system!
+> * **Recommended Approach — Cherry-pick! 🍒:** The best way to use these dotfiles is to browse the configs, take inspiration, and cherry-pick what you like (Dynamic theme selector, Riff player derivation, Noctalia capsule blur, Niri keybindings, Ghostty/Fish styling, or Fastfetch art) into your own existing system!
 
 ---
 
 ## ✨ Highlights
 
-* **Scrollable Tiling:** Fluid infinite horizontal canvas with dynamic column resizing via [Niri](https://github.com/YaLTeR/niri).
-* **Direct Scanout Pipeline:** Tailored window rules for fullscreen applications to enable uninhibited direct scanout with zero compositor overhead.
+* **Scrollable Tiling:** Fluid infinite horizontal canvas with dynamic column resizing and gesture physics via [Niri](https://github.com/YaLTeR/niri).
+* **Dynamic Theme Switcher (`Mod + Shift + T`):** Instant on-the-fly theme switching (Nord Aurora, Catppuccin Mocha, Cyberpunk 2077, Medieval Grim, Shardscapes, Nullscapes). Swaps wallpapers, Ghostty terminal palettes, and Noctalia styling synchronously without rebuilds.
+* **Packaged Riff Player (`pkgs/riff.nix`):** Custom Nix derivation for [Riff](https://github.com/rootscripts/riff) using `appimageTools`, configured with native Niri acrylic background blur and synchronized karaoke lyrics.
 * **Capsule Blur Patch:** Native C++ blur patch for the [Noctalia](https://github.com/noctalia-dev/noctalia) shell bar applied declaratively via `overrideAttrs`.
+* **Direct Scanout Pipeline:** Tailored window rules for fullscreen applications to enable uninhibited direct scanout with zero compositor overhead.
 * **NVIDIA Wayland Stability:** Configured driver buffer limits eliminating stutter and frame pacing issues.
 * **Declarative Flake:** Fully reproducible NixOS + Home Manager setup with atomic rollbacks.
-
----
-
-## 🎨 Color Palette
-
-Crafted around deep cosmic voids (`#080B16`) with electric lavender, mauve, and neon coral accents:
-
-| Role | Swatch | Hex Code | Description |
-| :--- | :---: | :--- | :--- |
-| **Deep Void** | `![#080B16](https://img.shields.io/badge/-%23080B16-080B16)` | `#080B16` | Root background & dark surfaces |
-| **Surface Elevated** | `![#141B29](https://img.shields.io/badge/-%23141B29-141B29)` | `#141B29` | Cards, popups, and elevated UI blocks |
-| **Highlight Surface** | `![#1B2437](https://img.shields.io/badge/-%231B2437-1B2437)` | `#1B2437` | Hover states, tab backgrounds, notifications |
-| **Electric Lavender / Blue** | `![#678FE4](https://img.shields.io/badge/-%23678FE4-678FE4)` | `#678FE4` | Primary accent, focused borders, Noctalia capsules |
-| **Cosmic Mauve** | `![#AB66CC](https://img.shields.io/badge/-%23AB66CC-AB66CC)` | `#AB66CC` | Secondary accent, button actives |
-| **Mint Cyan** | `![#79B9B5](https://img.shields.io/badge/-%2379B9B5-79B9B5)` | `#79B9B5` | Terminal green/cyan, success states |
-| **Neon Coral** | `![#FD4663](https://img.shields.io/badge/-%23FD4663-FD4663)` | `#FD4663` | Terminal red, error notifications, Fastfetch art |
-| **Ghost White** | `![#E8EDFF](https://img.shields.io/badge/-%23E8EDFF-E8EDFF)` | `#E8EDFF` | High-contrast readable foreground text |
 
 ---
 
@@ -70,18 +54,22 @@ Crafted around deep cosmic voids (`#080B16`) with electric lavender, mauve, and 
 <summary><b>Click to expand / collapse screenshots</b></summary>
 <br/>
 
-| Clean Desktop (Wallpaper & Noctalia Bar) | Noctalia Control Center & Sliders |
+| Clean Desktop (Aurora Wallpaper & Noctalia Bar) | Noctalia Media & Quick Controls |
 | :---: | :---: |
 | [![Clean Desktop](assets/screenshots/01_desktop.png)](assets/screenshots/01_desktop.png) | [![Control Center](assets/screenshots/02_control_center.png)](assets/screenshots/02_control_center.png) |
 
-| Ghostty & Fastfetch | Cava Audio Visualizer & Btop |
+| Ghostty & Fastfetch (100 Days Milestone) | Cava Audio Visualizer & Btop |
 | :---: | :---: |
 | [![Terminal & Fastfetch](assets/screenshots/03_terminal.png)](assets/screenshots/03_terminal.png) | [![Cava & Btop](assets/screenshots/04_cava_btop.png)](assets/screenshots/04_cava_btop.png) |
 
+| Dynamic Theme Selector (`Mod + Shift + T`) | Riff Music Player (Synced Lyrics & Blur) |
+| :---: | :---: |
+| [![Theme Selector](assets/screenshots/05_theme_switcher.png)](assets/screenshots/05_theme_switcher.png) | [![Riff Player](assets/screenshots/06_riff_lyrics.png)](assets/screenshots/06_riff_lyrics.png) |
+
 <div align="center">
 
-### Noctalia App Launcher
-[![App Launcher](assets/screenshots/05_launcher.png)](assets/screenshots/05_launcher.png)
+### Noctalia App Launcher (`Mod + D`)
+[![App Launcher](assets/screenshots/07_launcher.png)](assets/screenshots/07_launcher.png)
 
 </div>
 
@@ -93,26 +81,20 @@ Crafted around deep cosmic voids (`#080B16`) with electric lavender, mauve, and 
 
 | Component | Software / Details |
 | :--- | :--- |
-| **OS** | [NixOS](https://nixos.org/) (Unstable channel, Linux Zen kernel) |
+| **OS** | [NixOS](https://nixos.org/) (26.11 Unstable, Linux Zen kernel) |
 | **Compositor** | [Niri](https://github.com/YaLTeR/niri) (Scrollable-tiling Wayland compositor) |
 | **Shell & Bar** | [Noctalia](https://github.com/noctalia-dev/noctalia) (Custom C++ capsule blur patch included) |
-| **Terminal** | [Ghostty](https://ghostty.org/) (Nullscapes deep cosmic palette) |
+| **Terminal** | [Ghostty](https://ghostty.org/) (Dynamic palettes matching system themes) |
 | **Shell** | [Fish](https://fishshell.com/) + [Starship](https://starship.rs/) prompt |
 | **Fetch** | [Fastfetch](https://github.com/fastfetch-cli/fastfetch) with bundled art (`assets/fastfetch/Easy.png`) |
-| **Launcher** | [Fuzzel](https://codeberg.org/dnkl/fuzzel) & Noctalia App Launcher |
+| **Music Player** | [Riff](https://github.com/rootscripts/riff) (Nix derivation, lyrics, acrylic blur) & [Spicetify](https://spicetify.app/) |
+| **Theme Selector**| Rofi theme menu (`theme-selector.rasi`) & Python/Libadwaita GUI (`theme-menu-gui.py`) |
+| **Browser** | [Zen Browser](https://zen-browser.app/) |
 | **Screenshots** | [Satty](https://github.com/gabm/Satty) with instant screen freeze via Noctalia screencopy |
 | **Display Manager** | SDDM with [Astronaut theme](https://github.com/keyitdev/sddm-astronaut-theme) (Black Hole preset) |
 | **Bootloader** | GRUB with [HyperFluent theme](https://github.com/Coopydood/HyperFluent-GRUB-Theme) |
-| **Audio** | PipeWire + WirePlumber (software mixer volume curve) |
+| **Audio** | PipeWire + WirePlumber |
 | **Cursor** | Catppuccin Mocha Dark |
-
----
-
-## 🖼️ Wallpaper
-
-The live animated wallpaper shown in the showcase video is from **Wallpaper Engine**:
-* **Steam Workshop:** [Nullscapes - Wallpaper (No Text) by Kiba](https://steamcommunity.com/sharedfiles/filedetails/?id=3741021206) (Workshop ID: `3741021206`).
-* A high-resolution static version is included in this repository: [`assets/wallpapers/nullscapes.png`](assets/wallpapers/nullscapes.png).
 
 ---
 
@@ -121,13 +103,18 @@ The live animated wallpaper shown in the showcase video is from **Wallpaper Engi
 | Keybinding | Action |
 | :--- | :--- |
 | `Mod + Return` | Spawn Terminal ([Ghostty](https://ghostty.org/)) |
-| `Mod + D` | Application Launcher ([Fuzzel](https://codeberg.org/dnkl/fuzzel)) |
+| `Mod + D` | Application Launcher ([Noctalia](https://github.com/noctalia-dev/noctalia)) |
+| `Mod + Shift + T` | **Theme Selector** (Instant dynamic wallpaper & palette switch) |
+| `Mod + M` | **Riff Music Player** (Toggle visibility / launch) |
+| `Mod + Shift + M` | Spotify ([Spicetify](https://spicetify.app/)) |
+| `Mod + B` | Web Browser ([Zen Browser](https://zen-browser.app/)) |
+| `Mod + Shift + B` | Secondary Browser (Firefox) |
 | `Mod + E` | File Manager ([Dolphin](https://apps.kde.org/dolphin/)) |
-| `Mod + B` | Web Browser ([Firefox](https://www.mozilla.org/firefox/)) |
-| `Mod + M` | Music Player ([Spotify / Spicetify](https://spicetify.app/)) |
 | `Mod + Q` | Close Active Window |
 | `Mod + Space` | Toggle Keyboard Layout (`US` ↔ `RU`) |
 | `Print` | Capture Screenshot (Freeze screen + [Satty](https://github.com/gabm/Satty) annotation) |
+| `F9` | Toggle OBS Studio Recording (Silent WebSocket command) |
+| `F8` | Toggle OBS Studio Pause |
 | `Mod + H / L` | Focus Column Left / Right |
 | `Mod + J / K` | Focus Window Down / Up |
 | `Mod + Shift + H / L` | Move Column Left / Right |
@@ -136,8 +123,7 @@ The live animated wallpaper shown in the showcase video is from **Wallpaper Engi
 | `Mod + F` | Maximize Column |
 | `Mod + Shift + F` | Fullscreen Window (Direct Scanout) |
 | `Mod + 1..9` | Switch to Workspace 1–9 |
-| `XF86Audio*` | Volume up / down / mute (with Noctalia OSD) |
-| `XF86MonBrightness*`| Screen brightness up / down (with Noctalia OSD) |
+| `Mod + Shift + 1..9`| Move Focused Window to Workspace 1–9 |
 
 ---
 
@@ -147,34 +133,27 @@ The live animated wallpaper shown in the showcase video is from **Wallpaper Engi
 Spike-dotfiles/
 ├── assets/
 │   ├── fastfetch/Easy.png      # Fastfetch anime art logo
-│   ├── screenshots/            # Showcase screenshots
-│   ├── wallpapers/nullscapes.png # High-res static wallpaper
-│   ├── showcase.webp           # Looping animated preview
-│   └── showcase.mp4            # Full 2-minute showcase video
+│   ├── screenshots/            # 1080p showcase screenshots
+│   ├── wallpapers/             # Static and animated video wallpapers
+│   ├── showcase.webp           # Beat-drop theme switcher animated preview
+│   └── showcase.mp4            # Full 1080p 60fps showcase video with audio
+├── pkgs/
+│   └── riff.nix                # Custom Nix derivation for Riff music player
+├── scripts/
+│   └── theme-menu-gui.py       # GTK4 / Libadwaita theme switcher interface
+├── config/
+│   └── theme-manager/presets.json # Theme presets, palettes, and wallpaper mappings
 ├── patches/
 │   └── noctalia-bar-capsule-blur.patch # C++ patch for rounded capsule blur in Noctalia
+├── theme-selector.rasi         # Custom Rofi theme switcher stylesheet
+├── niri.kdl                    # Niri scroll-compositor window rules and binds
 ├── configuration.nix           # System-level NixOS configuration
-├── flake.nix                   # Flake inputs & system declaration
+├── flake.nix                   # Flake inputs & multi-host system declaration
 ├── hardware-configuration.nix.example # Hardware config template
-├── home.nix                    # Home Manager: Niri, Noctalia, Ghostty, Fish, Themes
+├── home.nix                    # Home Manager declaration: Niri, Noctalia, Themes, Ghostty
 ├── LICENSE                     # MIT License
 └── README.md                   # Project documentation
 ```
-
-### If you want to adapt this to your own system:
-1. **Never copy wholesale without checking hardware**:
-   Generate your own hardware config:
-   ```bash
-   sudo nixos-generate-config --show-hardware-config > hardware-configuration.nix
-   ```
-2. **Review `configuration.nix`**:
-   Adjust your video drivers (`services.xserver.videoDrivers`), username, and timezone.
-3. **Review `home.nix`**:
-   Adjust monitor connector names (`output "HDMI-A-1"` under Niri config) to match `niri msg outputs`.
-4. **Test build before switching**:
-   ```bash
-   nixos-rebuild build --flake .#nixos
-   ```
 
 ---
 
