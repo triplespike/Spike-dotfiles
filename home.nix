@@ -604,13 +604,9 @@ in
 
     packages = with pkgs; [
       # Терминальные утилиты и инструменты разработки
-      aider-chat
       btop
       cava
       cbonsai
-      antigravity-cli
-      antigravity-hub
-      codex
       ffmpeg
       jq
       nodejs_22
@@ -637,10 +633,8 @@ in
       # Пользовательские приложения
       (pkgs.callPackage ./pkgs/riff.nix {})
       inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
-      bottles
       file-roller
       gnome-text-editor
-      libreoffice
       gpu-screen-recorder-gtk
       kdePackages.dolphin
       kdePackages.kate
@@ -648,11 +642,7 @@ in
       kdePackages.partitionmanager
       linux-wallpaperengine
       loupe
-      nautilus
-      prismlauncher
-      protonup-qt
       swaybg
-      vscode
 
       # Инструменты сессии Niri/Wayland
       grim
@@ -701,7 +691,7 @@ in
             email = spike@nixos.local
         '';
       };
-      "/home/spike/.gtkrc-2.0".force = lib.mkForce true;
+      ".gtkrc-2.0".force = lib.mkForce true;
       ".icons/default/index.theme".force = lib.mkForce true;
 
       ".config/mozilla/firefox/mrf4l2sq.default/user.js" = {
@@ -987,7 +977,7 @@ in
       in {
         logo = {
           type = "kitty-direct";
-          source = "/home/spike/.config/fastfetch/logo.png";
+          source = "${config.home.homeDirectory}/.config/fastfetch/logo.png";
           width = 26;
           height = 13;
           padding = {
@@ -1282,7 +1272,7 @@ in
           screenshot = {
             freeze_screen = true;
             pipe_to_command = true;
-            pipe_command = "${pkgs.satty}/bin/satty --filename - --fullscreen --output-filename /home/spike/Pictures/Screenshots/Screenshot-%Y-%m-%d_%H-%M-%S.png";
+            pipe_command = "${pkgs.satty}/bin/satty --filename - --fullscreen --output-filename ${config.home.homeDirectory}/Pictures/Screenshots/Screenshot-%Y-%m-%d_%H-%M-%S.png";
             save_to_file = false;
             copy_to_clipboard = false;
           };
