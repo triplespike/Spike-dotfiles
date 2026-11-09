@@ -12,21 +12,13 @@ import sys
 os.environ["GSK_RENDERER"] = "gl"
 
 # Fallback GI_TYPELIB_PATH if not set by wrapper
-if "GI_TYPELIB_PATH" not in os.environ or "Adw" not in os.environ["GI_TYPELIB_PATH"]:
+if "GI_TYPELIB_PATH" not in os.environ:
     fallback_paths = [
-        "/home/spike/.local/state/nix/profiles/home-manager/home-path/lib/girepository-1.0",
+        "/etc/profiles/per-user/spike/lib/girepository-1.0",
         "/run/current-system/sw/lib/girepository-1.0",
-        "/nix/store/3dkd54d9711xghg7lq799ii9vwdmwwqa-libadwaita-1.9.3/lib/girepository-1.0",
-        "/nix/store/0bxxqghpd81agcp6ncz5d0rn3y4axk56-gtk4-4.22.4/lib/girepository-1.0",
-        "/nix/store/jxvb2w9s84m7g7iy5zcf6a9nq73bxqc3-pango-1.57.1/lib/girepository-1.0",
-        "/nix/store/6258qrsicd2vjcqfwq1pc5zn2hdpf73l-graphene-1.10.8/lib/girepository-1.0",
-        "/nix/store/z0ifv8wqq931phdxq7nl0r0xssprnh97-harfbuzz-13.2.1/lib/girepository-1.0",
-        "/nix/store/ki6hf4l2l5i6rp2m2vhkr492r627msl8-gdk-pixbuf-2.44.8/lib/girepository-1.0",
-        "/nix/store/3dkchpfn8r3ipsccl1001xhcl5smfjdx-glib-2.88.3/lib/girepository-1.0",
-        "/nix/store/sgcqy1rm7rkl076mq1x7c76ab233ggxz-gobject-introspection-1.86.0/lib/girepository-1.0",
+        os.path.expanduser("~/.local/state/nix/profiles/home-manager/home-path/lib/girepository-1.0"),
     ]
-    existing = os.environ.get("GI_TYPELIB_PATH", "")
-    os.environ["GI_TYPELIB_PATH"] = ":".join(fallback_paths) + (f":{existing}" if existing else "")
+    os.environ["GI_TYPELIB_PATH"] = ":".join(p for p in fallback_paths if os.path.isdir(p))
 
 import json
 import subprocess

@@ -1,0 +1,112 @@
+configuration {
+    modi: "dmenu";
+    show-icons: true;
+    font: "FiraCode Nerd Font 10";
+}
+
+* {
+    bg-base:      #0d111ad9;
+    bg-surface:   #151b26f2;
+    bg-card:      #1a2230;
+    bg-selected:  #253248;
+    border-col:   #2c394f;
+    border-focus: #678fe4;
+    fg-main:      #e2e8f0;
+    fg-sub:       #94a3b8;
+    accent:       #678fe4;
+    accent-peach: #ff8a3d;
+
+    background-color: transparent;
+    text-color:       @fg-main;
+}
+
+window {
+    transparency:     "real";
+    width:            880px;
+    height:           520px;
+    border:           2px;
+    border-color:     @border-focus;
+    border-radius:    16px;
+    background-color: @bg-base;
+    padding:          18px;
+}
+
+mainbox {
+    spacing:          14px;
+    children:         [ inputbar, listview ];
+}
+
+inputbar {
+    spacing:          10px;
+    padding:          8px 14px;
+    border:           1px;
+    border-color:     @border-col;
+    border-radius:    10px;
+    background-color: @bg-surface;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    text-color:       @accent;
+    font:             "FiraCode Nerd Font Bold 11";
+}
+
+entry {
+    placeholder:       "Поиск темы оформления...";
+    placeholder-color: @fg-sub;
+    text-color:        @fg-main;
+}
+
+listview {
+    columns:       4;
+    lines:         2;
+    spacing:       12px;
+    cycle:         true;
+    dynamic:       true;
+    scrollbar:     false;
+}
+
+element {
+    orientation:      vertical;
+    spacing:          8px;
+    padding:          10px;
+    border:           1px;
+    border-color:     @border-col;
+    border-radius:    12px;
+    background-color: @bg-card;
+    cursor:           pointer;
+}
+
+element-icon {
+    size:             110px;
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+    border-radius:    8px;
+    cursor:           pointer;
+}
+
+element-text {
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+    text-color:       inherit;
+    font:             "FiraCode Nerd Font Medium 10";
+    cursor:           pointer;
+}
+
+element selected.normal {
+    background-color: @bg-selected;
+    border-color:     @border-focus;
+    text-color:       #ffffff;
+}
+
+element normal.active {
+    border-color:     @accent-peach;
+    background-color: #241c1b;
+    text-color:       #ffb078;
+}
+
+element selected.active {
+    background-color: #38241d;
+    border-color:     @accent-peach;
+    text-color:       #ffc9a8;
+}
