@@ -72,8 +72,8 @@ in {
           [safe]
             directory = /etc/nixos
           [user]
-            name = triplespike
-            email = 254401449+triplespike@users.noreply.github.com
+            name = Spike
+            email = spike@nixos.local
         '';
       };
       ".icons/default/index.theme".force = lib.mkForce true;
