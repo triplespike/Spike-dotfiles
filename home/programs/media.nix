@@ -9,12 +9,9 @@
       swaybg
       linux-wallpaperengine
       loupe
-      protonup-qt
-
 
       # File managers (pick one)
       kdePackages.dolphin
-      # nautilus  # disabled - use dolphin
     ];
   };
 
