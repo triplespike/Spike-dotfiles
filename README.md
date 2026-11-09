@@ -18,9 +18,15 @@
 
 <br/>
 
+<video src="https://github.com/triplespike/Spike-dotfiles/raw/master/assets/showcase.mp4" controls="controls" width="100%" poster="assets/screenshots/01_desktop.png">
+  <a href="assets/showcase.mp4">▶️ Watch showcase video</a>
+</video>
+
+<br/>
+
 [![Spike Dotfiles Showcase Preview](assets/showcase.webp)](assets/showcase.mp4)
 
-<sub>✨ *Click preview to watch the full 1080p 60fps video with audio, or join the [Reddit Discussion](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)* ✨</sub>
+<sub>🎬 **[▶️ Смотреть полное 1080p 60fps видео со звуком](assets/showcase.mp4)** (Oliver Tree — Jerk) • [Reddit Discussion](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)</sub>
 
 </div>
 
@@ -87,7 +93,7 @@
 | **Terminal** | [Ghostty](https://ghostty.org/) (Dynamic palettes matching system themes) |
 | **Shell** | [Fish](https://fishshell.com/) + [Starship](https://starship.rs/) prompt |
 | **Fetch** | [Fastfetch](https://github.com/fastfetch-cli/fastfetch) with bundled art (`assets/fastfetch/Easy.png`) |
-| **Music Player** | [Riff](https://github.com/rootscripts/riff) (Nix derivation, lyrics, acrylic blur) & [Spicetify](https://spicetify.app/) |
+| **Music Player** | [Riff](https://github.com/rootscripts/riff) (Custom Nix derivation, synced lyrics, acrylic blur) |
 | **Theme Selector**| Rofi theme menu (`theme-selector.rasi`) & Python/Libadwaita GUI (`theme-menu-gui.py`) |
 | **Browser** | [Zen Browser](https://zen-browser.app/) |
 | **Screenshots** | [Satty](https://github.com/gabm/Satty) with instant screen freeze via Noctalia screencopy |
@@ -106,7 +112,6 @@
 | `Mod + D` | Application Launcher ([Noctalia](https://github.com/noctalia-dev/noctalia)) |
 | `Mod + Shift + T` | **Theme Selector** (Instant dynamic wallpaper & palette switch) |
 | `Mod + M` | **Riff Music Player** (Toggle visibility / launch) |
-| `Mod + Shift + M` | Spotify ([Spicetify](https://spicetify.app/)) |
 | `Mod + B` | Web Browser ([Zen Browser](https://zen-browser.app/)) |
 | `Mod + Shift + B` | Secondary Browser (Firefox) |
 | `Mod + E` | File Manager ([Dolphin](https://apps.kde.org/dolphin/)) |
