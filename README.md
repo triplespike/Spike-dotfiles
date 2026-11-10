@@ -12,7 +12,7 @@
 [![GitHub Forks](https://img.shields.io/github/forks/triplespike/Spike-dotfiles?style=for-the-badge&logo=github&color=678FE4)](https://github.com/triplespike/Spike-dotfiles/network/members)
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/triplespike/Spike-dotfiles?style=for-the-badge&color=AB66CC)](https://github.com/triplespike/Spike-dotfiles/commits/master)
 [![License](https://img.shields.io/badge/License-MIT-79B9B5?style=for-the-badge)](LICENSE)
-[![Reddit](https://img.shields.io/badge/Reddit-Showcase-FF4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)
+[![Reddit](https://img.shields.io/badge/Reddit-Showcase-FF4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/r/unixporn/comments/1xsxlpn/niri_celebrating_100_days_of_nixos_x_noctalia/)
 
 *A dark cosmic / cyberpunk daily-driver rice on NixOS featuring the Niri scroll-compositor, Noctalia shell, dynamic on-the-fly theme switching, and acrylic blur.*
 
@@ -26,7 +26,7 @@
 
 [![Spike Dotfiles Showcase Preview](assets/showcase.webp)](assets/showcase.mp4)
 
-<sub>🎬 **[▶️ Смотреть полное 1080p 60fps видео со звуком](assets/showcase.mp4)** (Oliver Tree — Jerk) • [Reddit Discussion](https://www.reddit.com/r/unixporn/comments/1wtkorx/niri_my_first_rice_on_nixos_x_noctalia/)</sub>
+<sub>🎬 **[▶️ Смотреть полное 1080p 60fps видео со звуком](assets/showcase.mp4)** (Oliver Tree — Jerk) • [Reddit Discussion](https://www.reddit.com/r/unixporn/comments/1xsxlpn/niri_celebrating_100_days_of_nixos_x_noctalia/)</sub>
 
 </div>
 
