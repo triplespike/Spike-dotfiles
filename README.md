@@ -111,7 +111,7 @@
 | `Mod + Return` | Spawn Terminal ([Ghostty](https://ghostty.org/)) |
 | `Mod + D` | Application Launcher ([Noctalia](https://github.com/noctalia-dev/noctalia)) |
 | `Mod + Shift + T` | **Theme Selector** (Instant dynamic wallpaper & palette switch) |
-| `Mod + M` | **Riff Music Player** (Toggle visibility / launch) |
+| `Mod + M` | **Music Player** ([Spotify / Spicetify](https://spicetify.app/)) |
 | `Mod + B` | Web Browser ([Zen Browser](https://zen-browser.app/)) |
 | `Mod + Shift + B` | Secondary Browser (Firefox) |
 | `Mod + E` | File Manager ([Dolphin](https://apps.kde.org/dolphin/)) |

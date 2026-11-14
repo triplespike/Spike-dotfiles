@@ -244,10 +244,12 @@
           clip-to-geometry true
       }
 
-      // Браузеры (Firefox и Zen Browser): всегда открываются на 100% ширины (с рамками и отступами)
+      // Браузеры (Firefox и Zen Browser): всегда открываются на 100% ширины (с рамками и отступами, без фуллскрина)
       window-rule {
           match app-id="(?i).*(firefox|zen).*"
           open-on-workspace "1"
+          open-maximized-to-edges false
+          open-fullscreen false
           default-column-width { proportion 1.0; }
           background-effect {
               blur true
@@ -303,8 +305,8 @@
           Mod+B { spawn "zen-beta"; }
           Mod+Shift+B { spawn "firefox"; }
 
-          // Музыкальный плеер Riff (умный переключатель / запуск)
-          Mod+M { spawn "riff-toggle"; }
+          // Музыкальный плеер Spotify (Spicetify)
+          Mod+M { spawn "spotify"; }
 
           // Лаунчер приложений Noctalia (поиск)
           Mod+D { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
