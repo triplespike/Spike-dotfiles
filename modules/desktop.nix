@@ -65,7 +65,22 @@
 
   programs.fish.enable = true;
   programs.nix-ld.enable = true;
-  programs.gamemode.enable = true;
+  programs.gamemode = {
+    enable = true;
+    enableRenice = true;
+    settings = {
+      general = {
+        desiredgov = "performance";
+        renice = 10;
+        ioprio = 0;
+        disable_splitlock = 1;
+      };
+      gpu = {
+        apply_gpu_optimisations = "accept-responsibility";
+        nv_powermizer_mode = 1; # Prefer Maximum Performance for GTX 1660 SUPER
+      };
+    };
+  };
   programs.gpu-screen-recorder.enable = true;
 
   services.flatpak.enable = true;

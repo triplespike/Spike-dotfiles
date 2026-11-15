@@ -659,6 +659,23 @@ in
           ${pkgs.libnotify}/bin/notify-send -a "GPU Replay" -u critical "ShadowPlay Replay" "Буфер не запущен! Нажмите Mod+Shift+F10"
         fi
       '')
+      (pkgs.writeShellScriptBin "scratchpad-toggle" ''
+        SCRATCH_ID=$(${pkgs.niri}/bin/niri msg -j windows 2>/dev/null | ${pkgs.jq}/bin/jq -r '.[] | select(.app_id == "ghostty-scratch") | .id' | head -n1)
+
+        if [ -z "$SCRATCH_ID" ] || [ "$SCRATCH_ID" = "null" ]; then
+          ${pkgs.ghostty}/bin/ghostty --class=ghostty-scratch -e ${pkgs.fish}/bin/fish &
+        else
+          IS_FOCUSED=$(${pkgs.niri}/bin/niri msg -j windows 2>/dev/null | ${pkgs.jq}/bin/jq -r --arg id "$SCRATCH_ID" '.[] | select(.id == ($id | tonumber)) | .is_focused')
+          CURRENT_WS=$(${pkgs.niri}/bin/niri msg -j workspaces 2>/dev/null | ${pkgs.jq}/bin/jq -r '.[] | select(.is_focused) | .idx')
+
+          if [ "$IS_FOCUSED" = "true" ]; then
+            ${pkgs.niri}/bin/niri msg action move-window-to-workspace --focus false --window-id "$SCRATCH_ID" "scratchpad"
+          else
+            ${pkgs.niri}/bin/niri msg action move-window-to-workspace --focus true --window-id "$SCRATCH_ID" "$CURRENT_WS"
+            ${pkgs.niri}/bin/niri msg action focus-window --id "$SCRATCH_ID"
+          fi
+        fi
+      '')
       kdePackages.dolphin
       kdePackages.kate
       kdePackages.kio-extras
@@ -1228,6 +1245,7 @@ in
       settings = {
         config-file = "?theme.conf";
         font-family = "JetBrainsMono Nerd Font";
+        font-feature = [ "calt" "zero" "cv01" ];
         window-width = 96;
         window-height = 25;
         window-save-state = "never";
@@ -1510,6 +1528,45 @@ in
           bookmark          # Закладки на интересные моменты
         ];
       };
+
+    mangohud = {
+      enable = true;
+      enableSessionWide = false;
+      settings = {
+        legacy_layout = false;
+        horizontal = false;
+        gpu_stats = true;
+        gpu_temp = true;
+        gpu_core_clock = true;
+        gpu_mem_clock = true;
+        gpu_power = true;
+        gpu_text = "GTX 1660S";
+        cpu_stats = true;
+        cpu_temp = true;
+        cpu_mhz = true;
+        cpu_power = true;
+        cpu_text = "R3 3300X";
+        vram = true;
+        ram = true;
+        fps = true;
+        frametime = true;
+        frame_timing = 1;
+        fps_limit = "0,144,60";
+        toggle_hud = "Shift_R+F12";
+        toggle_fps_limit = "Shift_R+F11";
+        font_size = 20;
+        background_alpha = 0.6;
+        round_corners = 10;
+        text_color = "CDD6F4";
+        gpu_color = "A6E3A1";
+        cpu_color = "89B4FA";
+        vram_color = "F9E2AF";
+        ram_color = "F9E2AF";
+        engine_color = "CBA6F7";
+        frametime_color = "A6E3A1";
+        background_color = "11111B";
+      };
+    };
 
     starship = {
       enable = true;
