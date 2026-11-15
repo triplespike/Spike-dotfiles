@@ -84,6 +84,11 @@
               color "#050711cc"
           }
 
+          // Индикатор вставки окна: мягкий неоновый акцент
+          insert-hint {
+              color "#678FE488"
+          }
+
           // Внутренние отступы от краёв экрана до ленты
           struts {
               left 10
@@ -97,6 +102,38 @@
           backdrop-color "#080B16dd"
           workspace-shadow {
               on
+          }
+      }
+
+      // ==========================================================
+      //             Графический Alt+Tab (recent-windows)
+      // ==========================================================
+      recent-windows {
+          // Задержка фиксации фокуса в истории
+          debounce-ms 500
+
+          // Задержка показа оверлея (быстрый Alt+Tab переключает мгновенно без мигания)
+          open-delay-ms 150
+
+          highlight {
+              active-color "#678FE4dd"
+              urgent-color "#FF5555dd"
+              padding 18
+              corner-radius 14
+          }
+
+          previews {
+              max-height 420
+              max-scale 0.55
+          }
+
+          binds {
+              Alt+Tab         { next-window; }
+              Alt+Shift+Tab   { previous-window; }
+
+              // Переключение только между окнами текущей программы (как Cmd+` в macOS)
+              Alt+grave       { next-window     filter="app-id"; }
+              Alt+Shift+grave { previous-window filter="app-id"; }
           }
       }
 

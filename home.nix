@@ -1258,7 +1258,115 @@ in
           ];
         };
       });
-      settings = {
+      settings = let
+        # Пресеты верхнего бара Noctalia:
+        # "classic" — оригинальный проверенный бар Spike (воркспейсы и часы слева, медиа в центре)
+        # "island"  — новый парящий симметричный бар (воркспейсы и часы в центре, медиа слева)
+        barPresets = {
+          classic = {
+            thickness = 40;
+            background_opacity = 0.0;
+            shadow = false;
+            contact_shadow = false;
+            margin_ends = 18;
+            margin_edge = 10;
+            padding = 6;
+            widget_spacing = 8;
+            capsule = false;
+            start = [ "group:lunar" ];
+            center = [ "group:pulse" ];
+            end = [ "group:signal" ];
+            capsule_group = [
+              {
+                id = "lunar";
+                members = [ "launcher" "wallpaper" "workspaces" "clock" ];
+                fill = "surface_variant";
+                border = "outline";
+                foreground = "on_surface";
+                padding = 10;
+                radius = 16;
+                opacity = 0.58;
+                widget_spacing = 8;
+              }
+              {
+                id = "pulse";
+                members = [ "audio_visualizer" "media" "audio_visualizer" ];
+                fill = "surface_variant";
+                border = "outline";
+                foreground = "on_surface";
+                padding = 12;
+                radius = 16;
+                opacity = 0.64;
+                widget_spacing = 8;
+              }
+              {
+                id = "signal";
+                members = [ "tray" "notifications" "clipboard" "network" "bluetooth" "volume" "brightness" "battery" "control-center" "session" ];
+                fill = "surface_variant";
+                border = "outline";
+                foreground = "on_surface";
+                padding = 10;
+                radius = 16;
+                opacity = 0.58;
+                widget_spacing = 8;
+              }
+            ];
+          };
+
+          island = {
+            thickness = 40;
+            background_opacity = 0.0;
+            shadow = false;
+            contact_shadow = false;
+            margin_ends = 18;
+            margin_edge = 10;
+            padding = 6;
+            widget_spacing = 8;
+            capsule = false;
+            start = [ "group:quick" ];
+            center = [ "group:island" ];
+            end = [ "group:signal" ];
+            capsule_group = [
+              {
+                id = "quick";
+                members = [ "launcher" "wallpaper" "media" "audio_visualizer" ];
+                fill = "surface_variant";
+                border = "outline";
+                foreground = "on_surface";
+                padding = 10;
+                radius = 16;
+                opacity = 0.60;
+                widget_spacing = 8;
+              }
+              {
+                id = "island";
+                members = [ "workspaces" "clock" ];
+                fill = "surface_variant";
+                border = "outline";
+                foreground = "on_surface";
+                padding = 10;
+                radius = 16;
+                opacity = 0.68;
+                widget_spacing = 8;
+              }
+              {
+                id = "signal";
+                members = [ "tray" "notifications" "clipboard" "network" "bluetooth" "volume" "brightness" "battery" "control-center" "session" ];
+                fill = "surface_variant";
+                border = "outline";
+                foreground = "on_surface";
+                padding = 10;
+                radius = 16;
+                opacity = 0.58;
+                widget_spacing = 8;
+              }
+            ];
+          };
+        };
+
+        # Активный пресет: "island" для тестирования нового или "classic" для возврата к прежнему
+        activeBar = "island";
+      in {
         backdrop.enabled = false;
         theme = {
           mode = "dark";
@@ -1281,55 +1389,7 @@ in
             copy_to_clipboard = false;
           };
         };
-        bar.main = {
-          thickness = 40;
-          background_opacity = 0.0;
-          shadow = false;
-          contact_shadow = false;
-          margin_ends = 18;
-          margin_edge = 10;
-          padding = 6;
-          widget_spacing = 8;
-          capsule = false;
-          start = [ "group:lunar" ];
-          center = [ "group:pulse" ];
-          end = [ "group:signal" ];
-          capsule_group = [
-            {
-              id = "lunar";
-              members = [ "launcher" "wallpaper" "workspaces" "clock" ];
-              fill = "surface_variant";
-              border = "outline";
-              foreground = "on_surface";
-              padding = 10;
-              radius = 16;
-              opacity = 0.58;
-              widget_spacing = 8;
-            }
-            {
-              id = "pulse";
-              members = [ "audio_visualizer" "media" "audio_visualizer" ];
-              fill = "surface_variant";
-              border = "outline";
-              foreground = "on_surface";
-              padding = 12;
-              radius = 16;
-              opacity = 0.64;
-              widget_spacing = 8;
-            }
-            {
-              id = "signal";
-              members = [ "tray" "notifications" "clipboard" "network" "bluetooth" "volume" "brightness" "battery" "control-center" "session" ];
-              fill = "surface_variant";
-              border = "outline";
-              foreground = "on_surface";
-              padding = 10;
-              radius = 16;
-              opacity = 0.58;
-              widget_spacing = 8;
-            }
-          ];
-        };
+        bar.main = barPresets.\${activeBar};
         widget.audio_visualizer = {
           width = 56;
           bands = 20;
