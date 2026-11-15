@@ -225,6 +225,24 @@
           draw-border-with-background false
       }
 
+      // Мягкое приглушение неактивных окон с исключением видео, игр и медиаплееров
+      window-rule {
+          match is-active=false
+          exclude app-id=r#"(?i).*(mpv|vlc|steam_app_|geometrydash|gamescope|spotify).*"#
+          opacity 0.92
+      }
+
+      // Выпадающий Quake-терминал по F12 (Scratchpad)
+      window-rule {
+          match app-id="ghostty-scratch"
+          open-floating true
+          default-column-width { fixed 1180; }
+          default-window-height { fixed 620; }
+          default-floating-position x=0 y=32 relative-to="top"
+          geometry-corner-radius 14
+          clip-to-geometry true
+      }
+
       // Geometry Dash и игры Steam: Direct Scanout, нулевой инпут-лаг, без скруглений и теней
       window-rule {
           match app-id=r#"(?i).*(steam_app_|geometrydash).*"#
@@ -509,6 +527,11 @@
           // ------------------------------------------------------
           Mod+F10       { spawn "pkill" "-SIGUSR1" "gpu-screen-recorder"; }
           Mod+Shift+F10 { spawn "gsr-toggle-replay"; }
+
+          // ------------------------------------------------------
+          //      Quake-Style Dropdown Terminal (Scratchpad)
+          // ------------------------------------------------------
+          F12 { spawn "scratchpad-toggle"; }
       }
 
       // Динамическая тема оформления (управляется theme-manager)
