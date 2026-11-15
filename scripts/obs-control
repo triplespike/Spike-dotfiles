@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Управление OBS через obs-websocket с системными уведомлениями
+
+ACTION="$1"
+
+# Проверяем, запущен ли OBS
+if ! pgrep -x "obs" > /dev/null && ! pgrep -f "bin/obs" > /dev/null; then
+    notify-send -u normal -i dialog-warning "OBS Studio" "⚠️ OBS не запущен"
+    exit 1
+fi
+
+case "$ACTION" in
+    toggle-record)
+        OUTPUT=$(obs-cmd recording toggle 2>&1)
+        EXIT_CODE=$?
+        
+        if [ $EXIT_CODE -ne 0 ]; then
+            notify-send -u critical -i dialog-error "OBS Studio" "Ошибка подключения к WebSocket\n(Включи Сервер WebSocket в OBS -> Сервис)"
+            exit 1
+        fi
+
+        # Проверяем фактический статус записи (уведомления отключены, чтобы не попадать на запись)
+        # STATUS=$(obs-cmd recording status 2>/dev/null)
+        # if echo "$STATUS" | grep -qi "active: true"; then
+        #     notify-send -u low -i media-record "OBS Studio" "🔴 Запись началась"
+        # else
+        #     notify-send -u low -i media-playback-stop "OBS Studio" "⏹ Запись остановлена"
+        # fi
+        ;;
+
+    toggle-pause)
+        OUTPUT=$(obs-cmd recording toggle-pause 2>&1)
+        EXIT_CODE=$?
+        
+        if [ $EXIT_CODE -ne 0 ]; then
+            notify-send -u critical -i dialog-error "OBS Studio" "Ошибка подключения к WebSocket\n(Включи Сервер WebSocket в OBS -> Сервис)"
+            exit 1
+        fi
+
+        # STATUS=$(obs-cmd recording status 2>/dev/null)
+        # if echo "$STATUS" | grep -qi "paused: true"; then
+        #     notify-send -u low -i media-playback-pause "OBS Studio" "⏸ Запись на паузе"
+        # else
+        #     notify-send -u low -i media-record "OBS Studio" "▶️ Запись возобновлена"
+        # fi
+        ;;
+
+    clicks)
+        obs-cmd scene-collection switch "Клики (Без игры)" > /dev/null 2>&1
+        obs-cmd profile switch "Клики (Без игры)" > /dev/null 2>&1
+        obs-cmd input mute "Звук игры / ПК" mute > /dev/null 2>&1
+        notify-send -u low -i audio-input-microphone "OBS Studio" "🎧 Режим: Клики (Без звука игры)"
+        ;;
+
+    balance)
+        obs-cmd scene-collection switch "Баланс (Игра + Микрофон)" > /dev/null 2>&1
+        obs-cmd profile switch "Баланс (Игра + Микрофон)" > /dev/null 2>&1
+        notify-send -u low -i audio-volume-high "OBS Studio" "🎮 Режим: Баланс (Игра + Голос)"
+        ;;
+
+    toggle-mode)
+        CURRENT=$(obs-cmd scene-collection current 2>/dev/null)
+        if echo "$CURRENT" | grep -qi "Клики"; then
+            "$0" balance
+        else
+            "$0" clicks
+        fi
+        ;;
+
+    *)
+        echo "Usage: $0 {toggle-record|toggle-pause|clicks|balance|toggle-mode}"
+        exit 1
+        ;;
+esac

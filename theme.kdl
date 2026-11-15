@@ -1,0 +1,31 @@
+layout {
+    focus-ring {
+        width 2.5
+        active-gradient from="#678FE4" to="#AB66CC" angle=135 relative-to="workspace-view"
+        inactive-color "transparent"
+    }
+
+    tab-indicator {
+        hide-when-single-tab
+        place-within-column
+        gap 6
+        width 4
+        length total-proportion=0.85
+        position "top"
+        active-gradient from="#678FE4" to="#AB66CC" angle=90
+        inactive-color "#1B243788"
+        corner-radius 6
+    }
+
+    shadow {
+        on
+        softness 42
+        spread 5
+        offset x=0 y=10
+        color "#050711cc"
+    }
+}
+
+overview {
+    backdrop-color "#080B16dd"
+}

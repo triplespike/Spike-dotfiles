@@ -99,10 +99,12 @@ let
     WP_TYPE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.type // "image"')"
     SCREEN="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.screen // "HDMI-A-1"')"
     FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
+    FALLBACK="''${FALLBACK/#\~/$HOME}"
     WALLPAPER_STARTED=1
 
     if [ "$WP_TYPE" = "video" ]; then
       VIDEO_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
+      VIDEO_PATH="''${VIDEO_PATH/#\~/$HOME}"
       stop_wallpapers
       if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
         noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
@@ -1610,7 +1612,7 @@ in
 
   systemd.user.services.force-ardor-headset = {
     Unit = {
-      Description = "Sequential profile toggle for Spooky's Ardor Headset";
+      Description = "Sequential profile toggle for Ardor Headset";
       After = [ "pipewire.service" "pipewire-pulse.service" "wireplumber.service" ];
       Wants = [ "pipewire.service" "pipewire-pulse.service" "wireplumber.service" ];
     };

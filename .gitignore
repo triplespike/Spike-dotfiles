@@ -1,11 +1,22 @@
 # Hardware-specific scan (generate your own using nixos-generate-config)
-/hardware-configuration.nix
+hardware-configuration.nix
+**/hardware-configuration.nix
 
 # Nix build results & direnv
 result
 result-*
 .direnv
 
-# Python bytecode
+# Python bytecode & cache
 __pycache__/
 *.pyc
+**/*.pyc
+scripts/__pycache__/
+
+# Secrets and credentials
+*.key
+*.pem
+id_ed25519*
+id_rsa*
+.env*
+.env

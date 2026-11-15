@@ -31,17 +31,17 @@
 +    return true;
 +  }
 +
-   if (!m_categoryFilterSlots.empty()) {
-     const std::size_t totalSlots = m_categoryFilterSlots.size();
-     const std::size_t nextSlot =
-         (m_activeCategorySlotIndex + totalSlots + (direction > 0 ? 1 : totalSlots - 1)) % totalSlots;
-     setActiveCategorySlot(nextSlot);
-     return true;
-   }
- 
-   return false;
- }
- 
++  if (!m_categoryFilterSlots.empty()) {
++    const std::size_t totalSlots = m_categoryFilterSlots.size();
++    const std::size_t nextSlot =
++        (m_activeCategorySlotIndex + totalSlots + (direction > 0 ? 1 : totalSlots - 1)) % totalSlots;
++    setActiveCategorySlot(nextSlot);
++    return true;
++  }
++
++  return false;
++}
++
  void LauncherPanel::updateCategorySelectionChrome() {
    if (m_launcherNavigation != nullptr && !m_categoryFilterSlots.empty()) {
      const std::size_t selectedIndex =

@@ -215,6 +215,12 @@
           clip-to-geometry true
       }
 
+      // Telegram Desktop: ровно 50% экрана (0.5), чтобы вставать рядом со вторым окном без скролла
+      window-rule {
+          match app-id="(?i).*telegram.*"
+          default-column-width { proportion 0.5; }
+      }
+
       // Spotify: умеренная прозрачность к живым обоям стола и легкий блюр (xray false)
       window-rule {
           match app-id="(?i).*spotify.*"
@@ -230,6 +236,16 @@
           match app-id="(?i).*riff.*"
           opacity 0.90
           default-column-width { proportion 0.5; }
+          background-effect {
+              blur true
+              xray false
+          }
+      }
+
+
+      // Vesktop: нативное прозрачное стекло через Electron transparent с аппаратным блюром (иконки 100% плотные)
+      window-rule {
+          match app-id="(?i).*vesktop.*"
           background-effect {
               blur true
               xray false
