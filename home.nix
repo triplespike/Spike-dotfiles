@@ -695,8 +695,6 @@ in
             email = spike@nixos.local
         '';
       };
-      ".gtkrc-2.0".force = lib.mkForce true;
-      ".icons/default/index.theme".force = lib.mkForce true;
 
       ".config/mozilla/firefox/default-firefox/user.js" = {
         force = lib.mkForce true;
@@ -1389,7 +1387,7 @@ in
             copy_to_clipboard = false;
           };
         };
-        bar.main = barPresets.\${activeBar};
+        bar.main = barPresets.${activeBar};
         widget.audio_visualizer = {
           width = 56;
           bands = 20;
