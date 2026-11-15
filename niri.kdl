@@ -333,6 +333,15 @@
           open-floating true
       }
 
+      // Прямой аппаратный скан-аут (Direct Scanout) для игр (минимальный инпут-лаг, байпас композиции)
+      window-rule {
+          match app-id=r#"^(steam_app_.*|gamescope|wine|lutris|heroic|bottles|prismlauncher|osu|rpcs3)$"#
+          geometry-corner-radius 0
+          clip-to-geometry false
+          shadow { off; }
+          focus-ring { off; }
+      }
+
       // ==========================================================
       //                     Горячие клавиши
       // ==========================================================
@@ -494,6 +503,12 @@
           // ------------------------------------------------------
           F9 { spawn "obs-control" "toggle-record"; }
           F8 { spawn "obs-control" "toggle-pause"; }
+
+          // ------------------------------------------------------
+          //      GPU Screen Recorder (ShadowPlay повтор в RAM)
+          // ------------------------------------------------------
+          Mod+F10       { spawn "pkill" "-SIGUSR1" "gpu-screen-recorder"; }
+          Mod+Shift+F10 { spawn "gsr-toggle-replay"; }
       }
 
       // Динамическая тема оформления (управляется theme-manager)

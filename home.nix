@@ -640,6 +640,25 @@ in
       file-roller
       gnome-text-editor
       gpu-screen-recorder-gtk
+      gpu-screen-recorder
+      (pkgs.writeShellScriptBin "gsr-toggle-replay" ''
+        if ${pkgs.procps}/bin/pgrep -x "gpu-screen-recorder" >/dev/null; then
+          ${pkgs.procps}/bin/pkill -x "gpu-screen-recorder"
+          ${pkgs.libnotify}/bin/notify-send -a "GPU Replay" -i video-x-generic "ShadowPlay Replay" "Буфер повторов остановлен"
+        else
+          mkdir -p "$HOME/Videos/Replays"
+          ${pkgs.gpu-screen-recorder}/bin/gpu-screen-recorder -w screen -f 60 -a default_output -c mp4 -replay-storage ram -r 60 -ro "$HOME/Videos/Replays" >/dev/null 2>&1 &
+          ${pkgs.libnotify}/bin/notify-send -a "GPU Replay" -i video-x-generic "ShadowPlay Replay" "Буфер повторов запущен (60 сек в RAM)"
+        fi
+      '')
+      (pkgs.writeShellScriptBin "gsr-save-replay" ''
+        if ${pkgs.procps}/bin/pgrep -x "gpu-screen-recorder" >/dev/null; then
+          ${pkgs.procps}/bin/pkill -SIGUSR1 -x "gpu-screen-recorder"
+          ${pkgs.libnotify}/bin/notify-send -a "GPU Replay" -i video-x-generic "ShadowPlay Replay" "Клип сохраняется в ~/Videos/Replays/"
+        else
+          ${pkgs.libnotify}/bin/notify-send -a "GPU Replay" -u critical "ShadowPlay Replay" "Буфер не запущен! Нажмите Mod+Shift+F10"
+        fi
+      '')
       kdePackages.dolphin
       kdePackages.kate
       kdePackages.kio-extras

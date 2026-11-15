@@ -13,9 +13,17 @@
   ];
 
   # ==========================================================
-  #                        Boot / Bootloader
+  #                        Boot / Bootloader & Kernel
   # ==========================================================
-  zramSwap.enable = true;
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 50;
+  };
+
+  boot.loader.timeout = 1;
+  systemd.services.NetworkManager-wait-online.enable = false;
+  systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
 
   boot.loader.systemd-boot.enable = false;
 
@@ -38,6 +46,22 @@
 
   # Высокопроизводительное ядро CachyOS с планировщиком BORE и оптимизациями x86-64-v3
   boot.kernelPackages = pkgs.linuxPackages_cachyos-bore;
+
+  boot.kernelParams = [
+    "quiet"
+    "splash"
+    "loglevel=3"
+    "rd.systemd.show_status=false"
+    "amd_pstate=active"
+  ];
+
+  # TCP BBR + FQ сетевой стек для минимального пинга в онлайн-играх
+  boot.kernelModules = [ "tcp_bbr" ];
+  boot.kernel.sysctl = {
+    "net.ipv4.tcp_congestion_control" = "bbr";
+    "net.core.default_qdisc" = "fq";
+    "vm.swappiness" = 100;
+  };
 
   # ==========================================================
   #                        Networking
@@ -110,17 +134,47 @@
   ];
 
   # ==========================================================
+  #                 Hardware & Environment
+  # ==========================================================
+
+  # Мгновенная разблокировка звука гарнитуры Ardor Temple Pro при подключении по USB
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="sound", ATTRS{idVendor}=="040b", ATTRS{idProduct}=="0897", RUN+="${pkgs.alsa-utils}/bin/amixer -c %n sset 'PCM',0 100% unmute", RUN+="${pkgs.alsa-utils}/bin/amixer -c %n sset 'PCM',1 100% unmute"
+  '';
+
+  environment.sessionVariables = {
+    # 10 GiB кэш шейдеров NVIDIA (устраняет микро-статтеры в играх)
+    __GL_SHADER_DISK_CACHE_SKIP_CLEANUP = "1";
+    __GL_SHADER_DISK_CACHE_SIZE = "10737418240";
+    # Аппаратное декодирование видео через NVDEC
+    LIBVA_DRIVER_NAME = "nvidia";
+    NVD_BACKEND = "direct";
+    ELECTRON_OZONE_PLATFORM_HINT = "auto";
+  };
+
+  # ==========================================================
   #                        Nix settings
   # ==========================================================
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nix.settings.warn-dirty = true;
-  nix.settings.trusted-users = [ "root" "@wheel" "spike" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    warn-dirty = true;
+    trusted-users = [ "root" "@wheel" "spike" ];
+    auto-optimise-store = true;
+    min-free = 10 * 1024 * 1024 * 1024; # 10 GiB
+    max-free = 30 * 1024 * 1024 * 1024; # 30 GiB
+  };
 
-  # Еженедельная автоматическая дедупликация store жесткими ссылками
+  # Еженедельная сборка мусора и автоматическая дедупликация store жесткими ссылками
   nix.optimise = {
     automatic = true;
     dates = [ "weekly" ];
+  };
+
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 7d";
   };
 
   # State version
