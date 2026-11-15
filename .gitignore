@@ -16,7 +16,17 @@ scripts/__pycache__/
 # Secrets and credentials
 *.key
 *.pem
-id_ed25519*
-id_rsa*
+*.age
+id_*
+*.gpg
+*.asc
+*.pgp
+secrets/
 .env*
 .env
+
+# Editor & temporary files
+*.swp
+*.swo
+*~
+.DS_Store

@@ -159,6 +159,7 @@ let
       fi
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
       WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
+      WP_PATH="''${WP_PATH/#\~/$HOME}"
       stop_wallpapers
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
         noctalia msg wallpaper-set "$WP_PATH" >/dev/null 2>&1 || true
@@ -465,6 +466,7 @@ EOF
 
     CHOSEN_INDEX="$(
       while IFS=$'\t' read -r id name icon fallback; do
+        fallback="''${fallback/#\~/$HOME}"
         thumb="$CACHE_DIR/''${id}.jpg"
         if [ ! -f "$thumb" ] && [ -n "$fallback" ] && [ -f "$fallback" ]; then
           thumb="$fallback"

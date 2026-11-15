@@ -292,7 +292,7 @@ class ThemeMenuApp(Adw.Application):
         thumb_frame.add_css_class("thumb-frame")
         thumb_frame.set_size_request(210, 118)
 
-        fallback_img = preset.get("wallpaper", {}).get("fallback_image", "")
+        fallback_img = os.path.expanduser(preset.get("wallpaper", {}).get("fallback_image", ""))
         thumb_path = None
         if fallback_img and os.path.exists(fallback_img):
             cache_dir = os.path.expanduser("~/.cache/theme-manager/thumbnails")
