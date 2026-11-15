@@ -6,9 +6,9 @@
       "icon": "🌌",
       "wallpaper": {
         "type": "video",
-        "path": "/home/spike/.local/share/Steam/steamapps/workshop/content/431960/3741021206/NULLSCAPES WALLPAPER NOTEXT.mp4",
+        "path": "~/.local/share/Steam/steamapps/workshop/content/431960/3741021206/NULLSCAPES WALLPAPER NOTEXT.mp4",
         "screen": "HDMI-A-1",
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/nullscapes.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/nullscapes.png"
       },
       "noctalia": {
         "source": "custom",
@@ -99,7 +99,7 @@
           "y2": "-10",
           "y3": "-10"
         },
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/tokyo-night.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/tokyo-night.png"
       },
       "noctalia": {
         "source": "community",
@@ -186,7 +186,7 @@
           "clock": "0",
           "date": "0"
         },
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/catppuccin.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/catppuccin.png"
       },
       "noctalia": {
         "source": "community",
@@ -252,9 +252,9 @@
       "icon": "⚡",
       "wallpaper": {
         "type": "video",
-        "path": "/mnt/storage/SteamLibrary/steamapps/workshop/content/431960/3332060962/CozyCyberpunkLoft_4K_cc2023.mp4",
+        "path": "~/Spike-dotfiles/assets/wallpapers/cyberpunk.mp4",
         "screen": "HDMI-A-1",
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/cyberpunk.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/cyberpunk.png"
       },
       "noctalia": {
         "source": "community",
@@ -325,7 +325,7 @@
         "args": [
           "--disable-mouse"
         ],
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/nord-aurora.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/nord-aurora.png"
       },
       "noctalia": {
         "source": "community",
@@ -391,9 +391,9 @@
       "icon": "💎",
       "wallpaper": {
         "type": "video",
-        "path": "/home/spike/.local/share/Steam/steamapps/workshop/content/431960/3303795013/Shardscapes.mp4",
+        "path": "~/.local/share/Steam/steamapps/workshop/content/431960/3303795013/Shardscapes.mp4",
         "screen": "HDMI-A-1",
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/shardscapes.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/shardscapes.png"
       },
       "noctalia": {
         "source": "custom",
@@ -459,9 +459,9 @@
       "icon": "⚔️",
       "wallpaper": {
         "type": "video",
-        "path": "/home/spike/Spike-dotfiles/assets/wallpapers/medieval.mp4",
+        "path": "~/Spike-dotfiles/assets/wallpapers/medieval.mp4",
         "screen": "HDMI-A-1",
-        "fallback_image": "/home/spike/Spike-dotfiles/assets/wallpapers/medieval.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/medieval.png"
       },
       "noctalia": {
         "source": "community",

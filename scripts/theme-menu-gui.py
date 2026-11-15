@@ -13,8 +13,9 @@ os.environ["GSK_RENDERER"] = "gl"
 
 # Fallback GI_TYPELIB_PATH if not set by wrapper
 if "GI_TYPELIB_PATH" not in os.environ:
+    current_user = os.environ.get("USER", "spike")
     fallback_paths = [
-        "/etc/profiles/per-user/spike/lib/girepository-1.0",
+        f"/etc/profiles/per-user/{current_user}/lib/girepository-1.0",
         "/run/current-system/sw/lib/girepository-1.0",
         os.path.expanduser("~/.local/state/nix/profiles/home-manager/home-path/lib/girepository-1.0"),
     ]

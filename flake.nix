@@ -36,14 +36,19 @@
       url = "github:0xc000022070/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Chaotic-Nyx: ядро CachyOS, планировщик BORE, оптимизации x86-64-v3 и бинарный кэш
+    chaotic = {
+      url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, noctalia, spicetify-nix, agenix, nixpkgs-satellite, ... }@inputs: let
+  outputs = { self, nixpkgs, home-manager, noctalia, spicetify-nix, agenix, nixpkgs-satellite, chaotic, ... }@inputs: let
     system = "x86_64-linux";
     lib = nixpkgs.lib;
     mkHost = name: {
       configuration = import ./hosts/${name}/configuration.nix;
-      hardware = import ./hosts/${name}/hardware-configuration.nix;
       home = import ./hosts/${name}/home.nix;
     };
     hosts = {
@@ -54,7 +59,7 @@
       system = system;
       specialArgs = { inherit inputs; hostName = name; };
       modules = [
-        host.hardware
+        chaotic.nixosModules.default
         host.configuration
         home-manager.nixosModules.home-manager
         {

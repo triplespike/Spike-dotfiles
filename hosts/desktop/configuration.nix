@@ -3,7 +3,9 @@
 
 {
   imports = [
-    ./hardware-configuration.nix
+    (if builtins.pathExists ./hardware-configuration.nix
+     then ./hardware-configuration.nix
+     else ./hardware-configuration.nix.example)
     ../../modules/niri.nix
     ../../modules/graphics.nix
     ../../modules/audio.nix
@@ -34,8 +36,8 @@
 
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Linux Zen Kernel for low-latency desktop & gaming
-  boot.kernelPackages = pkgs.linuxPackages_zen;
+  # Высокопроизводительное ядро CachyOS с планировщиком BORE и оптимизациями x86-64-v3
+  boot.kernelPackages = pkgs.linuxPackages_cachyos-bore;
 
   # ==========================================================
   #                        Networking
@@ -112,7 +114,14 @@
   # ==========================================================
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nix.settings.warn-dirty = false;
+  nix.settings.warn-dirty = true;
+  nix.settings.trusted-users = [ "root" "@wheel" "spike" ];
+
+  # Еженедельная автоматическая дедупликация store жесткими ссылками
+  nix.optimise = {
+    automatic = true;
+    dates = [ "weekly" ];
+  };
 
   # State version
   system.stateVersion = "26.05";
