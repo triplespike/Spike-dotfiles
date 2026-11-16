@@ -30,3 +30,5 @@ secrets/
 *.swo
 *~
 .DS_Store
+.agents/
+
