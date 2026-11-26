@@ -190,12 +190,13 @@ def main() -> int:
     )
 
     template_env = os.environ.get("ZEN_NEWTAB_TEMPLATE", "").strip()
-    template_path = (
-        Path(template_env)
-        if template_env
-        else Path(__file__).resolve().parent.parent / "zen-newtab/index.html"
-    )
-    if template_path.exists():
+    candidates = [
+        Path(template_env) if template_env else None,
+        Path(__file__).resolve().parent.parent / "zen-newtab/index.html",
+        home / ".config/theme-manager/zen-newtab.html",
+    ]
+    template_path = next((p for p in candidates if p is not None and p.exists()), None)
+    if template_path is not None:
         html = template_path.read_text(encoding="utf-8")
         injected = re.sub(
             r'<style id="theme-vars">.*?</style>',

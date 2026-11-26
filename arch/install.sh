@@ -143,22 +143,26 @@ QT_STYLE_OVERRIDE=breeze
 EOF
 
 # Приложения по умолчанию: картинки/гифки -> Gwenview, видео -> mpv, satty только для скриншотов
-backup_if_exists "$HOME/.config/mimeapps.list"
-mkdir -p "$HOME/.config"
-{
-  echo "[Default Applications]"
-  for t in image/png image/jpeg image/gif image/webp image/bmp image/avif image/svg+xml image/tiff; do
-    echo "$t=org.kde.gwenview.desktop;"
-  done
-  for t in video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo; do
-    echo "$t=mpv.desktop;"
-  done
-} > "$HOME/.config/mimeapps.list"
+IMG_MIMES=(image/png image/jpeg image/gif image/webp image/bmp image/avif image/svg+xml image/tiff)
+VID_MIMES=(video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo)
+if command -v xdg-mime >/dev/null 2>&1; then
+  xdg-mime default org.kde.gwenview.desktop "${IMG_MIMES[@]}" >/dev/null 2>&1 || true
+  xdg-mime default mpv.desktop "${VID_MIMES[@]}" >/dev/null 2>&1 || true
+else
+  backup_if_exists "$HOME/.config/mimeapps.list"
+  mkdir -p "$HOME/.config"
+  {
+    echo "[Default Applications]"
+    for t in "${IMG_MIMES[@]}"; do echo "$t=org.kde.gwenview.desktop;"; done
+    for t in "${VID_MIMES[@]}"; do echo "$t=mpv.desktop;"; done
+  } > "$HOME/.config/mimeapps.list"
+fi
 
-# Прописываем реальный путь к репозиторию в presets.json
+# Прописываем реальный путь к репозиторию в presets.json и кладём шаблон новой вкладки Zen
 backup_if_exists "$HOME/.config/theme-manager/presets.json"
 mkdir -p "$HOME/.config/theme-manager"
 sed "s|~/Spike-dotfiles|$REPO_DIR|g" "$ARCH_DIR/config/theme-manager/presets.json" > "$HOME/.config/theme-manager/presets.json"
+install_file "$REPO_DIR/zen-newtab/index.html" "$HOME/.config/theme-manager/zen-newtab.html" 0644
 
 log "Устанавливаю скрипты в ~/.local/bin..."
 mkdir -p "$HOME/.local/bin"
