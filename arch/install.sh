@@ -40,6 +40,7 @@ PACMAN_PKGS=(
   noctalia adw-gtk-theme papirus-icon-theme breeze plasma-integration
   dolphin firefox playerctl wireplumber
   polkit polkit-kde-agent udisks2 gvfs ntfs-3g
+  gwenview mpv kdegraphics-thumbnailers ffmpegthumbs
   grim slurp wl-clipboard cliphist swaybg hyprpicker
   tesseract tesseract-data-eng tesseract-data-rus zbar ffmpeg libnotify
   btop cava bat eza zoxide fzf yazi satty
@@ -140,6 +141,19 @@ cat > "$HOME/.config/environment.d/90-spike-qt.conf" <<'EOF'
 QT_QPA_PLATFORMTHEME=kde
 QT_STYLE_OVERRIDE=breeze
 EOF
+
+# Приложения по умолчанию: картинки/гифки -> Gwenview, видео -> mpv, satty только для скриншотов
+backup_if_exists "$HOME/.config/mimeapps.list"
+mkdir -p "$HOME/.config"
+{
+  echo "[Default Applications]"
+  for t in image/png image/jpeg image/gif image/webp image/bmp image/avif image/svg+xml image/tiff; do
+    echo "$t=org.kde.gwenview.desktop;"
+  done
+  for t in video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo; do
+    echo "$t=mpv.desktop;"
+  done
+} > "$HOME/.config/mimeapps.list"
 
 # Прописываем реальный путь к репозиторию в presets.json
 backup_if_exists "$HOME/.config/theme-manager/presets.json"
