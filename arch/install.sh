@@ -39,6 +39,7 @@ PACMAN_PKGS=(
   niri ghostty fish starship fastfetch jq rofi
   noctalia adw-gtk-theme papirus-icon-theme breeze plasma-integration
   dolphin firefox playerctl wireplumber
+  polkit polkit-kde-agent udisks2 gvfs ntfs-3g
   grim slurp wl-clipboard cliphist swaybg hyprpicker
   tesseract tesseract-data-eng tesseract-data-rus zbar ffmpeg libnotify
   btop cava bat eza zoxide fzf yazi satty

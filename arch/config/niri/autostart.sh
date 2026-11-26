@@ -21,6 +21,13 @@ if command -v gsettings >/dev/null 2>&1; then
   gsettings set org.gnome.desktop.interface cursor-size "$XCURSOR_SIZE" 2>/dev/null || true
 fi
 
+# Polkit-агент: без него Dolphin не может монтировать диски/NTFS-разделы (udisks2)
+if ! pgrep -f polkit-kde-authentication-agent-1 >/dev/null 2>&1; then
+  for a in /usr/lib/polkit-kde-authentication-agent-1 /usr/libexec/polkit-kde-authentication-agent-1 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1; do
+    [ -x "$a" ] && { "$a" & break; }
+  done
+fi
+
 # Фоновые демоны, панель Noctalia и обои
 command -v wl-clip-persist >/dev/null 2>&1 && { pgrep -x wl-clip-persist >/dev/null || wl-clip-persist --clipboard regular & }
 command -v xwayland-satellite >/dev/null 2>&1 && { pgrep -x xwayland-satellite >/dev/null || xwayland-satellite & }
