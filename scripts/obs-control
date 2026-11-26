@@ -46,21 +46,25 @@ case "$ACTION" in
         ;;
 
     clicks)
-        obs-cmd scene-collection switch "Клики (Без игры)" > /dev/null 2>&1
-        obs-cmd profile switch "Клики (Без игры)" > /dev/null 2>&1
-        obs-cmd input mute "Звук игры / ПК" mute > /dev/null 2>&1
-        notify-send -u low -i audio-input-microphone "OBS Studio" "🎧 Режим: Клики (Без звука игры)"
+        SCENE_CLICKS="${OBS_SCENE_CLICKS:-Clicks}"
+        AUDIO_GAME="${OBS_AUDIO_GAME:-Desktop Audio}"
+        obs-cmd scene-collection switch "$SCENE_CLICKS" > /dev/null 2>&1
+        obs-cmd profile switch "$SCENE_CLICKS" > /dev/null 2>&1
+        obs-cmd input mute "$AUDIO_GAME" mute > /dev/null 2>&1
+        notify-send -u low -i audio-input-microphone "OBS Studio" "🎧 Режим: $SCENE_CLICKS"
         ;;
 
     balance)
-        obs-cmd scene-collection switch "Баланс (Игра + Микрофон)" > /dev/null 2>&1
-        obs-cmd profile switch "Баланс (Игра + Микрофон)" > /dev/null 2>&1
-        notify-send -u low -i audio-volume-high "OBS Studio" "🎮 Режим: Баланс (Игра + Голос)"
+        SCENE_BALANCE="${OBS_SCENE_BALANCE:-Balance}"
+        obs-cmd scene-collection switch "$SCENE_BALANCE" > /dev/null 2>&1
+        obs-cmd profile switch "$SCENE_BALANCE" > /dev/null 2>&1
+        notify-send -u low -i audio-volume-high "OBS Studio" "🎮 Режим: $SCENE_BALANCE"
         ;;
 
     toggle-mode)
+        SCENE_CLICKS="${OBS_SCENE_CLICKS:-Clicks}"
         CURRENT=$(obs-cmd scene-collection current 2>/dev/null)
-        if echo "$CURRENT" | grep -qi "Клики"; then
+        if echo "$CURRENT" | grep -qi "$SCENE_CLICKS"; then
             "$0" balance
         else
             "$0" clicks

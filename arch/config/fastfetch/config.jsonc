@@ -3,16 +3,16 @@
   "logo": {
     "type": "kitty-direct",
     "source": "~/.config/fastfetch/logo.png",
-    "width": 26,
-    "height": 13,
+    "width": 24,
+    "height": 12,
     "padding": {
       "top": 1,
-      "left": 2,
-      "right": 4
+      "left": 1,
+      "right": 3
     }
   },
   "display": {
-    "separator": "  󰅂  ",
+    "separator": " 󰅂 ",
     "color": {
       "separator": "bright_black"
     },
@@ -38,98 +38,98 @@
         "elapsed": "bright_cyan",
         "total": "bright_black"
       },
-      "width": 8
+      "width": 7
     }
   },
   "modules": [
     {
       "type": "custom",
-      "format": "\u001b[94m╭─ \u001b[1m\u001b[94m  system\u001b[0m\u001b[94m ─────────────────────────────────────────╮\u001b[0m"
+      "format": "\u001b[94m╭─ \u001b[1m\u001b[94m  system\u001b[0m\u001b[94m ─────────────────────────────────────\u001b[79G╮\u001b[0m"
     },
     {
       "type": "os",
-      "key": "\u001b[94m│\u001b[0m    os    ",
+      "key": "\u001b[94m│\u001b[0m   os    ",
       "keyColor": "bright_blue",
-      "format": "{name} {version-id}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{name} {version-id}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "kernel",
-      "key": "\u001b[94m│\u001b[0m  󰌢  kernel",
+      "key": "\u001b[94m│\u001b[0m 󰌢  kernel",
       "keyColor": "bright_blue",
-      "format": "{release}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{release}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "uptime",
-      "key": "\u001b[94m│\u001b[0m  󱫐  uptime",
+      "key": "\u001b[94m│\u001b[0m 󱫐  uptime",
       "keyColor": "bright_blue",
-      "format": "{?days}{days}д {?}{hours}ч {minutes}м\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{?days}{days}д {?}{hours}ч {minutes}м\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "command",
-      "key": "\u001b[94m│\u001b[0m  󰔠  age   ",
+      "key": "\u001b[94m│\u001b[0m 󰔠  age   ",
       "keyColor": "bright_blue",
       "text": "birth=$(cat ~/.config/fastfetch/install-date 2>/dev/null || stat -c %W / 2>/dev/null); [ -z \"$birth\" ] || [ \"$birth\" = \"0\" ] && birth=$(stat -c %Y /etc/pacman.log 2>/dev/null || date +%s); echo $(( ($(date +%s) - birth) / 86400 )) дней",
-      "format": "{result}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{result}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "custom",
-      "format": "\u001b[94m├─ \u001b[1m\u001b[95m󱂬  desktop\u001b[0m\u001b[94m ────────────────────────────────────────┤\u001b[0m"
+      "format": "\u001b[94m├─ \u001b[1m\u001b[95m󱂬  desktop\u001b[0m\u001b[94m ────────────────────────────────────\u001b[79G┤\u001b[0m"
     },
     {
       "type": "wm",
-      "key": "\u001b[94m│\u001b[0m  󰧨  wm    ",
+      "key": "\u001b[94m│\u001b[0m 󰧨  wm    ",
       "keyColor": "bright_magenta",
-      "format": "{pretty-name}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{pretty-name}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "terminal",
-      "key": "\u001b[94m│\u001b[0m    term  ",
+      "key": "\u001b[94m│\u001b[0m   term  ",
       "keyColor": "bright_magenta",
-      "format": "{pretty-name}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{pretty-name}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "shell",
-      "key": "\u001b[94m│\u001b[0m  󰞷  shell ",
+      "key": "\u001b[94m│\u001b[0m 󰞷  shell ",
       "keyColor": "bright_magenta",
-      "format": "{pretty-name}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{pretty-name}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "custom",
-      "format": "\u001b[94m├─ \u001b[1m\u001b[96m  hardware\u001b[0m\u001b[94m ───────────────────────────────────────┤\u001b[0m"
+      "format": "\u001b[94m├─ \u001b[1m\u001b[96m  hardware\u001b[0m\u001b[94m ───────────────────────────────────\u001b[79G┤\u001b[0m"
     },
     {
       "type": "cpu",
-      "key": "\u001b[94m│\u001b[0m    cpu   ",
+      "key": "\u001b[94m│\u001b[0m   cpu   ",
       "keyColor": "bright_cyan",
-      "format": "{1}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{name}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "gpu",
-      "key": "\u001b[94m│\u001b[0m  󰢮  gpu   ",
+      "key": "\u001b[94m│\u001b[0m 󰢮  gpu   ",
       "keyColor": "bright_cyan",
-      "format": "{2}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{name}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "memory",
-      "key": "\u001b[94m│\u001b[0m  󰘚  ram   ",
+      "key": "\u001b[94m│\u001b[0m 󰘚  ram   ",
       "keyColor": "bright_cyan",
-      "format": "{percentage-bar} {used} / {total}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{percentage-bar} {used} / {total}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "disk",
-      "key": "\u001b[94m│\u001b[0m  󰋊  disk  ",
+      "key": "\u001b[94m│\u001b[0m 󰋊  disk  ",
       "keyColor": "bright_cyan",
       "folders": "/",
-      "format": "{size-percentage-bar} {size-used} / {size-total}\u001b[87G\u001b[94m│\u001b[0m"
+      "format": "{size-percentage-bar} {size-used} / {size-total}\u001b[79G\u001b[94m│\u001b[0m"
     },
     {
       "type": "custom",
-      "format": "\u001b[94m╰─────────────────────────────────────────────────────╯\u001b[0m"
+      "format": "\u001b[94m╰─────────────────────────────────────────────────\u001b[79G╯\u001b[0m"
     },
     {
       "type": "colors",
       "symbol": "circle",
-      "paddingLeft": 3
+      "paddingLeft": 2
     }
   ]
 }

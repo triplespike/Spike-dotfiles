@@ -95,8 +95,9 @@
 | **Fetch** | [Fastfetch](https://github.com/fastfetch-cli/fastfetch) with bundled art (`assets/fastfetch/Easy.png`) |
 | **Music Player** | [Riff](https://github.com/rootscripts/riff) (Custom Nix derivation, synced lyrics, acrylic blur) |
 | **Theme Selector**| Rofi theme menu (`theme-selector.rasi`) & Python/Libadwaita GUI (`theme-menu-gui.py`) |
-| **Browser** | [Zen Browser](https://zen-browser.app/) |
-| **Screenshots** | [Satty](https://github.com/gabm/Satty) with instant screen freeze via Noctalia screencopy |
+| **Browser** | [Zen Browser](https://zen-browser.app/) (live SSE theme sync without restarts + custom newtab) |
+| **Live Wallpapers** | `ryoku-livewall` (`wlr-layer-shell` + `wl_shm` + `libav`, auto-pause on fullscreen/games) + `mpvpaper` fallback |
+| **Screenshots** | `lumine-capture` / [Satty](https://github.com/gabm/Satty) |
 | **Display Manager** | SDDM with [Astronaut theme](https://github.com/keyitdev/sddm-astronaut-theme) (Black Hole preset) |
 | **Bootloader** | GRUB with [HyperFluent theme](https://github.com/Coopydood/HyperFluent-GRUB-Theme) |
 | **Audio** | PipeWire + WirePlumber |
@@ -109,24 +110,27 @@
 | Keybinding | Action |
 | :--- | :--- |
 | `Mod + Return` | Spawn Terminal ([Ghostty](https://ghostty.org/)) |
-| `Mod + D` | Application Launcher ([Noctalia](https://github.com/noctalia-dev/noctalia)) |
-| `Mod + Shift + T` | **Theme Selector** (Instant dynamic wallpaper & palette switch) |
+| `Mod + D` | Application Launcher ([Noctalia](https://github.com/noctalia-dev/noctalia) / Rofi fallback) |
+| `Mod + Shift + T` | **Theme Selector** (Instant dynamic wallpaper, Noctalia, Ghostty & Zen SSE switch) |
 | `Mod + M` | **Music Player** ([Spotify / Spicetify](https://spicetify.app/)) |
-| `Mod + B` | Web Browser ([Zen Browser](https://zen-browser.app/)) |
+| `Mod + B` | Web Browser ([Zen Browser](https://zen-browser.app/) / Firefox fallback) |
 | `Mod + Shift + B` | Secondary Browser (Firefox) |
-| `Mod + E` | File Manager ([Dolphin](https://apps.kde.org/dolphin/)) |
+| `Mod + E` | File Manager ([Dolphin](https://apps.kde.org/dolphin/) in Breeze Dark) |
 | `Mod + Q` | Close Active Window |
 | `Mod + Space` | Toggle Keyboard Layout (`US` ↔ `RU`) |
-| `Print` | Capture Screenshot (Freeze screen + [Satty](https://github.com/gabm/Satty) annotation) |
-| `F9` | Toggle OBS Studio Recording (Silent WebSocket command) |
-| `F8` | Toggle OBS Studio Pause |
+| `Print` / `Mod + Shift + S` | Capture Screenshot (`lumine-capture` / Satty) |
+| `Mod + Shift + O` | **OCR Capture** (`tesseract` `eng+rus` -> clipboard) |
+| `Mod + Shift + R` | **QR Scanner** (`zbar` -> clipboard + auto-open URLs) |
+| `Mod + Ctrl + C` | **Color Picker** (`hyprpicker` -> hex to clipboard) |
+| `Mod + Shift + M` | **Music Recognition** (`songrec` / Shazam -> clipboard) |
+| `F9` / `F8` | Toggle OBS Studio Recording / Pause |
 | `Mod + H / L` | Focus Column Left / Right |
 | `Mod + J / K` | Focus Window Down / Up |
 | `Mod + Shift + H / L` | Move Column Left / Right |
 | `Mod + Shift + J / K` | Move Window Down / Up |
-| `Mod + R` | Switch Preset Column Width (e.g. 50% ↔ 75% ↔ 100%) |
+| `Mod + Down` | Switch Preset Column Width (`25%` ↔ `50%` ↔ `75%` ↔ `100%`) |
 | `Mod + F` | Maximize Column |
-| `Mod + Shift + F` | Fullscreen Window (Direct Scanout) |
+| `Mod + Shift + F` | Fullscreen Window (Direct Scanout + wallpaper auto-pause) |
 | `Mod + 1..9` | Switch to Workspace 1–9 |
 | `Mod + Shift + 1..9`| Move Focused Window to Workspace 1–9 |
 

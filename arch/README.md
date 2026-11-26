@@ -19,8 +19,8 @@ cd ~/Spike-dotfiles
 
 ## Что ставится и настраивается автоматически
 
-- **Noctalia Shell** (`extra/noctalia`) — верхняя капсульная панель, центр управления, OSD и лаунчер (`config.toml` + палитра `Nullscapes`), плюс тёмный `rofi` в резерв.
-- **Тёмная тема и курсор** (`adw-gtk3-dark`, `Papirus-Dark`, `catppuccin-mocha-dark-cursors`) — конфиги GTK 3/4, `gsettings` (`prefer-dark`) и XCursor fallback.
+- **Noctalia Shell** (`extra/noctalia`) — верхняя капсульная панель, центр управления, OSD и лаунчер (`config.toml` + все 7 оффлайн-палитр), плюс тёмный `rofi` в резерв.
+- **Тёмная тема GTK + Qt/Dolphin и курсор** (`adw-gtk3-dark`, `BreezeDark` в `kdeglobals`, `Papirus-Dark`, `catppuccin-mocha-dark-cursors`) — конфиги GTK 3/4, Qt/KDE (`QT_QPA_PLATFORMTHEME=kde`), `gsettings` (`prefer-dark`) и XCursor.
 - **Zen Browser (`zen-browser-bin`) + Firefox** — `user.js`, стеклянный `userChrome.css`, кастомная новая вкладка, и встроенный подписанный XPI `ryoku-zen-palette@local` для живой перекраски без перезапуска через `theme-zen-bridge.service`.
 - **Niri** (`~/.config/niri/config.kdl`, `theme.kdl`, `autostart.sh`) — без жёсткого `HDMI-A-1`, с автопоиском установленных программ и пробросом `~/.local/bin`.
 - **Theme Manager (`Mod+Shift+T`)** — 7 тем с локальными обоями из `assets/wallpapers/` (включая бесшовный `medieval-loop.mp4`), автоопределением монитора и лёгким нативным плеером `ryoku-livewall` (`wlr-layer-shell` + `wl_shm` + `libav`, резерв — `mpvpaper`/`swaybg`).

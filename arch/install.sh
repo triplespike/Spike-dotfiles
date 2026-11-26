@@ -37,7 +37,7 @@ warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 
 PACMAN_PKGS=(
   niri ghostty fish starship fastfetch jq rofi
-  noctalia adw-gtk-theme papirus-icon-theme
+  noctalia adw-gtk-theme papirus-icon-theme breeze plasma-integration
   dolphin firefox playerctl wireplumber
   grim slurp wl-clipboard cliphist swaybg hyprpicker
   tesseract tesseract-data-eng tesseract-data-rus zbar ffmpeg libnotify
@@ -60,7 +60,7 @@ if [ "$INSTALL_PKGS" -eq 1 ]; then
   if command -v pacman >/dev/null 2>&1; then
     PAC_FLAGS=(--needed)
     [ "$NONINTERACTIVE" -eq 1 ] && PAC_FLAGS+=(--noconfirm)
-    log "Устанавливаю пакеты (Niri, Noctalia, темы, утилиты) через pacman..."
+    log "Устанавливаю пакеты (Niri, Noctalia, темы, Dolphin Breeze, утилиты) через pacman..."
     sudo pacman -S "${PAC_FLAGS[@]}" "${PACMAN_PKGS[@]}"
   else
     warn "pacman не найден — пропускаю установку системных пакетов."
@@ -73,6 +73,11 @@ if [ "$INSTALL_PKGS" -eq 1 ]; then
 
   if [ -n "$AUR_HELPER" ]; then
     AUR_FLAGS=(--needed)
+    if [ "$AUR_HELPER" = "yay" ]; then
+      AUR_FLAGS+=(--answerdiff None --answerclean None --removemake)
+    elif [ "$AUR_HELPER" = "paru" ]; then
+      AUR_FLAGS+=(--skipreview)
+    fi
     [ "$NONINTERACTIVE" -eq 1 ] && AUR_FLAGS+=(--noconfirm)
     log "Устанавливаю пакеты из AUR (Zen Browser, курсор, mpvpaper, songrec...) через $AUR_HELPER..."
     "$AUR_HELPER" -S "${AUR_FLAGS[@]}" "${AUR_PKGS[@]}" || warn "Некоторые AUR-пакеты не установились — продолжим с тем, что есть."
@@ -111,8 +116,16 @@ install_file "$REPO_DIR/theme-selector.rasi"                "$HOME/.config/rofi/
 install_file "$ARCH_DIR/config/rofi/config.rasi"            "$HOME/.config/rofi/config.rasi" 0644
 install_file "$ARCH_DIR/config/gtk-3.0/settings.ini"        "$HOME/.config/gtk-3.0/settings.ini" 0644
 install_file "$ARCH_DIR/config/gtk-4.0/settings.ini"        "$HOME/.config/gtk-4.0/settings.ini" 0644
+install_file "$ARCH_DIR/config/kdeglobals"                  "$HOME/.config/kdeglobals" 0644
 install_file "$ARCH_DIR/config/icons/default/index.theme"   "$HOME/.local/share/icons/default/index.theme" 0644
-install_file "$ARCH_DIR/config/noctalia/palettes/Nullscapes.json" "$HOME/.config/noctalia/palettes/Nullscapes.json" 0644
+
+# Оффлайн-палитры Noctalia (custom + community) для мгновенной работы всех 7 тем
+for pal in "$ARCH_DIR/config/noctalia/palettes"/*.json; do
+  [ -f "$pal" ] && install_file "$pal" "$HOME/.config/noctalia/palettes/$(basename "$pal")" 0644
+done
+for pal in "$ARCH_DIR/config/noctalia/community-palettes"/*.json; do
+  [ -f "$pal" ] && install_file "$pal" "$HOME/.local/state/noctalia/community-palettes/$(basename "$pal")" 0644
+done
 
 backup_if_exists "$HOME/.config/noctalia/config.toml"
 mkdir -p "$HOME/.config/noctalia" "$HOME/Pictures/Screenshots"
@@ -121,6 +134,10 @@ sed "s|__HOME__|$HOME|g" "$ARCH_DIR/config/noctalia/config.toml" > "$HOME/.confi
 mkdir -p "$HOME/.config/environment.d"
 cat > "$HOME/.config/environment.d/90-spike-local-bin.conf" <<'EOF'
 PATH=$HOME/.local/bin:$PATH
+EOF
+cat > "$HOME/.config/environment.d/90-spike-qt.conf" <<'EOF'
+QT_QPA_PLATFORMTHEME=kde
+QT_STYLE_OVERRIDE=breeze
 EOF
 
 # Прописываем реальный путь к репозиторию в presets.json
@@ -244,12 +261,15 @@ fi
 
 if command -v niri >/dev/null 2>&1; then
   log "Проверяю конфиг Niri..."
-  niri validate || warn "niri validate сообщил замечания — проверьте ~/.config/niri/config.kdl"
+  niri validate -c "$HOME/.config/niri/config.kdl" || warn "niri validate сообщил замечания — проверьте ~/.config/niri/config.kdl"
 fi
 
 # Если установка запущена внутри живой Wayland/Niri сессии — применяем всё на лету
 if [ -n "${WAYLAND_DISPLAY:-}" ]; then
   log "Применяю конфиг Niri, панель Noctalia и тему прямо сейчас..."
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user set-environment QT_QPA_PLATFORMTHEME=kde QT_STYLE_OVERRIDE=breeze >/dev/null 2>&1 || true
+  fi
   niri msg action load-config-file >/dev/null 2>&1 || true
   if command -v noctalia >/dev/null 2>&1; then
     pgrep -x noctalia >/dev/null || nohup noctalia >/dev/null 2>&1 &

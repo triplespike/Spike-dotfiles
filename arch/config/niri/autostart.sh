@@ -5,10 +5,12 @@ export PATH="$HOME/.local/bin:$PATH"
 export NO_AT_BRIDGE=1
 export XCURSOR_THEME="${XCURSOR_THEME:-catppuccin-mocha-dark-cursors}"
 export XCURSOR_SIZE="${XCURSOR_SIZE:-20}"
+export QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-kde}"
+export QT_STYLE_OVERRIDE="${QT_STYLE_OVERRIDE:-breeze}"
 
 # Проброс переменных Wayland/Niri в D-Bus и systemd --user
-dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri DISPLAY NIRI_SOCKET XCURSOR_THEME XCURSOR_SIZE 2>/dev/null || true
-systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP DISPLAY NIRI_SOCKET XCURSOR_THEME XCURSOR_SIZE 2>/dev/null || true
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri DISPLAY NIRI_SOCKET XCURSOR_THEME XCURSOR_SIZE QT_QPA_PLATFORMTHEME QT_STYLE_OVERRIDE 2>/dev/null || true
+systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP DISPLAY NIRI_SOCKET XCURSOR_THEME XCURSOR_SIZE QT_QPA_PLATFORMTHEME QT_STYLE_OVERRIDE 2>/dev/null || true
 
 # Тёмная тема и курсор для GTK / Electron / браузеров
 if command -v gsettings >/dev/null 2>&1; then

@@ -352,8 +352,8 @@
           // Scratchpad плавающий терминал
           Mod+T { spawn "ghostty" "--class=ghostty-scratch" "--title=Scratchpad"; }
 
-          // Файловый менеджер Dolphin
-          Mod+E { spawn "sh" "-c" "for fm in dolphin nautilus thunar nemo pcmanfm; do command -v $fm >/dev/null && exec $fm; done; notify-send 'Niri' 'Файловый менеджер не найден (установите dolphin)'"; }
+          // Файловый менеджер Dolphin (сразу в тёмной схеме BreezeDark)
+          Mod+E { spawn "sh" "-c" "export QT_QPA_PLATFORMTHEME=kde QT_STYLE_OVERRIDE=breeze; for fm in dolphin nautilus thunar nemo pcmanfm; do command -v $fm >/dev/null && exec $fm; done; notify-send 'Niri' 'Файловый менеджер не найден (установите dolphin)'"; }
 
           // Браузеры (Zen по Mod+B, классический Firefox по Mod+Shift+B)
           Mod+B { spawn "sh" "-c" "for b in zen-browser zen-beta firefox chromium google-chrome-stable brave; do command -v $b >/dev/null && exec $b; done; notify-send 'Niri' 'Браузер не найден (установите zen-browser или firefox)'"; }
@@ -485,8 +485,8 @@
           // ------------------------------------------------------
           //                      Скриншоты
           // ------------------------------------------------------
-          Print       { spawn "sh" "-c" "if command -v lumine-capture >/dev/null; then exec lumine-capture; elif command -v satty >/dev/null; then g=$(slurp) && grim -g \"$g\" - | satty -f -; else g=$(slurp) && grim -g \"$g\" - | wl-copy; fi"; }
-          Mod+Shift+S { spawn "sh" "-c" "if command -v lumine-capture >/dev/null; then exec lumine-capture; elif command -v satty >/dev/null; then g=$(slurp) && grim -g \"$g\" - | satty -f -; else g=$(slurp) && grim -g \"$g\" - | wl-copy; fi"; }
+          Print       { spawn "sh" "-c" "if command -v lumine-capture >/dev/null; then exec lumine-capture; elif command -v satty >/dev/null; then g=$(slurp 2>/dev/null) && [ -n \"$g\" ] && grim -g \"$g\" - | satty -f -; else g=$(slurp 2>/dev/null) && [ -n \"$g\" ] && grim -g \"$g\" - | wl-copy; fi"; }
+          Mod+Shift+S { spawn "sh" "-c" "if command -v lumine-capture >/dev/null; then exec lumine-capture; elif command -v satty >/dev/null; then g=$(slurp 2>/dev/null) && [ -n \"$g\" ] && grim -g \"$g\" - | satty -f -; else g=$(slurp 2>/dev/null) && [ -n \"$g\" ] && grim -g \"$g\" - | wl-copy; fi"; }
           Ctrl+Print  { screenshot-screen; }
           Alt+Print   { screenshot-window; }
 

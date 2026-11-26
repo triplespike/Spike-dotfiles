@@ -277,8 +277,8 @@
       "name": "Nord Aurora (Aurora Winter)",
       "icon": "❄️",
       "wallpaper": {
-        "type": "video",
-        "path": "~/Spike-dotfiles/assets/wallpapers/nord-aurora.mp4",
+        "type": "image",
+        "path": "~/Spike-dotfiles/assets/wallpapers/nord-aurora.png",
         "screen": "auto",
         "fallback_image": "~/Spike-dotfiles/assets/wallpapers/nord-aurora.png"
       },
