@@ -1,6 +1,6 @@
 # Spike-dotfiles для Arch Linux / CachyOS / EndeavourOS
 
-Портативная версия риса **Niri + Ghostty + Fish + Starship + Fastfetch + Theme Manager + Ryoku-утилиты**, очищенная от NixOS-зависимостей и хардкодов железа.
+Полный перенос риса **Niri + Noctalia + Ghostty + Fish + Starship + Fastfetch + Zen Browser + Theme Manager + Ryoku-утилиты** на Arch-подобные дистрибутивы за один шаг.
 
 ## Быстрая установка
 
@@ -10,28 +10,24 @@ cd ~/Spike-dotfiles
 ./arch/install.sh
 ```
 
-> Если пакеты уже стоят и нужно только разложить конфиги и собрать `ryoku-livewall`:
+> Если пакеты уже стоят и нужно только разложить конфиги и пересобрать `ryoku-livewall`:
 > ```bash
 > ./arch/install.sh --no-packages
 > ```
 
 Существующие конфиги автоматически сохраняются в `~/.config-backup-spike-<дата>/`.
 
-## Что ставится и работает из коробки
+## Что ставится и настраивается автоматически
 
-- **Niri** (`~/.config/niri/config.kdl`, `theme.kdl`, `autostart.sh`) — без жёсткого `HDMI-A-1`, подхватит ваш монитор автоматически.
-- **Theme Manager (`Mod+Shift+T`)** — 7 тем с локальными обоями прямо из `assets/wallpapers/` (Steam / Wallpaper Engine не обязательны!), автоопределением монитора и синхронизацией Niri, Ghostty, Cava, Btop, Vesktop, VSCode, Firefox и Zen Browser.
-- **Лёгкие видеообои `ryoku-livewall`** — собирается локально в `~/.local/bin/ryoku-livewall` (`wlr-layer-shell` + `wl_shm` + `libav`, резерв — `mpvpaper`/`swaybg`).
-- **Авто-пауза обоев в играх и фуллскрине** — `systemd --user` сервис `wallpaper-autopause.service`.
-- **Живая перекраска Zen Browser без перезапуска** — локальный SSE-мост `theme-zen-bridge.service` (`127.0.0.1:47616`). Чтобы включить в Zen Browser, просто перетащите `vendor/ryoku/zen/ryoku-zen-palette-1.0.3.xpi` в окно браузера.
+- **Noctalia Shell** (`extra/noctalia`) — верхняя капсульная панель, центр управления, OSD и лаунчер (`config.toml` + палитра `Nullscapes`), плюс тёмный `rofi` в резерв.
+- **Тёмная тема и курсор** (`adw-gtk3-dark`, `Papirus-Dark`, `catppuccin-mocha-dark-cursors`) — конфиги GTK 3/4, `gsettings` (`prefer-dark`) и XCursor fallback.
+- **Zen Browser (`zen-browser-bin`) + Firefox** — `user.js`, стеклянный `userChrome.css`, кастомная новая вкладка, и встроенный подписанный XPI `ryoku-zen-palette@local` для живой перекраски без перезапуска через `theme-zen-bridge.service`.
+- **Niri** (`~/.config/niri/config.kdl`, `theme.kdl`, `autostart.sh`) — без жёсткого `HDMI-A-1`, с автопоиском установленных программ и пробросом `~/.local/bin`.
+- **Theme Manager (`Mod+Shift+T`)** — 7 тем с локальными обоями из `assets/wallpapers/` (включая бесшовный `medieval-loop.mp4`), автоопределением монитора и лёгким нативным плеером `ryoku-livewall` (`wlr-layer-shell` + `wl_shm` + `libav`, резерв — `mpvpaper`/`swaybg`).
+- **Авто-пауза обоев в играх и фуллскрине** — `wallpaper-autopause.service`.
 - **Экранные и медиа-утилиты:**
   - `Mod+Shift+O` — `ocr-grab` (OCR выделенной области, `eng+rus` -> буфер обмена)
   - `Mod+Shift+R` — `qr-scan` (распознавание QR-кода -> буфер + открытие URL)
   - `Mod+Ctrl+C` — `color-pick` (пипетка цвета `hyprpicker` -> hex)
   - `Mod+Shift+M` — `songrec-grab` (распознавание трека Shazam/SongRec)
   - В терминале: `discord-compress <файл.mp4>` (2-pass сжатие видео до `<10 MB`).
-
-## Опционально (из AUR)
-- `noctalia-shell` — верхняя панель и лаунчер (если не установлена, `Mod+D` автоматически открывает `rofi -show drun`, а статичные обои ставит `swaybg`).
-- `zen-browser-bin` — браузер (если не установлен, `Mod+B` откроет Firefox).
-- `catppuccin-cursors-mocha` — тема курсора.

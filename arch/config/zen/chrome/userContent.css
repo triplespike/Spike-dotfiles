@@ -1,0 +1,24 @@
+@import url("theme-colors.css");
+
+@-moz-document url("about:home"), url("about:newtab"), url("about:blank"), url("about:privatebrowsing") {
+  body, #root, .outer-wrapper {
+    background-color: var(--zen-bg) !important;
+    color: var(--zen-fg) !important;
+  }
+}
+
+@-moz-document url-prefix("about:") {
+  :root {
+    --in-content-page-background: var(--zen-bg) !important;
+    --in-content-box-background: var(--zen-surface) !important;
+    --in-content-border-color: var(--zen-border) !important;
+    --in-content-text-color: var(--zen-fg) !important;
+    --in-content-primary-button-background: var(--zen-primary) !important;
+    --in-content-primary-button-text-color: #FFFFFF !important;
+  }
+}
+
+* {
+  scrollbar-color: var(--zen-primary) var(--zen-bg) !important;
+  scrollbar-width: thin !important;
+}

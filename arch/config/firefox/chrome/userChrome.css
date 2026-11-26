@@ -1,0 +1,47 @@
+@import url("theme-colors.css");
+
+/* Firefox Minimal Glass Theme (synced with Theme Manager) */
+:root {
+  --toolbar-bgcolor: var(--ff-toolbar-bg, rgba(8, 11, 22, 0.75)) !important;
+  --tab-selected-bgcolor: var(--ff-surface-alt, rgba(27, 36, 55, 0.85)) !important;
+  --lwt-accent-color: var(--ff-bg, #080B16) !important;
+  --lwt-text-color: var(--ff-fg, #E8EDFF) !important;
+  --arrowpanel-background: var(--ff-surface, #141B29) !important;
+  --arrowpanel-color: var(--ff-fg, #E8EDFF) !important;
+  --arrowpanel-border-color: var(--ff-border, rgba(103, 143, 228, 0.28)) !important;
+}
+
+#navigator-toolbox {
+  background-color: var(--ff-toolbar-bg, rgba(8, 11, 22, 0.75)) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid var(--ff-border, rgba(97, 103, 113, 0.25)) !important;
+}
+
+/* Скругление вкладок под стиль капсул */
+.tabbrowser-tab .tab-background {
+  border-radius: 10px !important;
+  margin-block: 4px !important;
+}
+
+.tabbrowser-tab[selected="true"] .tab-background {
+  background: var(--ff-surface-alt, #1B2437) !important;
+  border: 1px solid var(--ff-primary, #678FE4) !important;
+}
+
+/* Аккуратная адресная строка */
+#urlbar-background {
+  border-radius: 12px !important;
+  background-color: var(--ff-urlbar-bg, rgba(20, 27, 41, 0.8)) !important;
+  border: 1px solid var(--ff-border, rgba(97, 103, 113, 0.3)) !important;
+}
+
+#urlbar[focused="true"] > #urlbar-background {
+  border-color: var(--ff-primary, #678FE4) !important;
+  box-shadow: 0 0 0 1px var(--ff-primary, #678FE4) !important;
+}
+
+/* Стилизация скроллбаров под активную тему */
+* {
+  scrollbar-color: var(--ff-primary, #678FE4) var(--ff-bg, #080B16) !important;
+  scrollbar-width: thin !important;
+}

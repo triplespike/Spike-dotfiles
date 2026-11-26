@@ -1,0 +1,95 @@
+[backdrop]
+enabled = false
+
+[bar.main]
+background_opacity = 0.0
+capsule = false
+center = ["group:pulse"]
+contact_shadow = false
+end = ["group:signal"]
+margin_edge = 10
+margin_ends = 18
+padding = 6
+shadow = false
+start = ["group:lunar"]
+thickness = 40
+widget_spacing = 8
+
+[[bar.main.capsule_group]]
+border = "outline"
+fill = "surface_variant"
+foreground = "on_surface"
+id = "lunar"
+members = ["launcher", "wallpaper", "workspaces", "clock"]
+opacity = 0.58
+padding = 10
+radius = 16
+widget_spacing = 8
+
+[[bar.main.capsule_group]]
+border = "outline"
+fill = "surface_variant"
+foreground = "on_surface"
+id = "pulse"
+members = ["audio_visualizer", "media", "audio_visualizer"]
+opacity = 0.64
+padding = 12
+radius = 16
+widget_spacing = 8
+
+[[bar.main.capsule_group]]
+border = "outline"
+fill = "surface_variant"
+foreground = "on_surface"
+id = "signal"
+members = ["tray", "notifications", "clipboard", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
+opacity = 0.58
+padding = 10
+radius = 16
+widget_spacing = 8
+
+[osd]
+background_opacity = 0.85
+offset_y = 14
+orientation = "horizontal"
+position = "top_center"
+scale = 1.0
+
+[osd.kinds]
+bluetooth = true
+brightness = true
+volume = true
+volume_input = true
+volume_output = true
+wifi = true
+
+[shell]
+corner_radius_scale = 0.88
+font_family = "JetBrainsMono Nerd Font"
+
+[shell.panel]
+borders = true
+shadow = true
+transparency_mode = "soft"
+
+[shell.screenshot]
+copy_to_clipboard = false
+freeze_screen = true
+pipe_command = "satty --filename - --fullscreen --output-filename __HOME__/Pictures/Screenshots/Screenshot-%Y-%m-%d_%H-%M-%S.png"
+pipe_to_command = true
+save_to_file = false
+
+[theme]
+custom_palette = "Nullscapes"
+mode = "dark"
+source = "custom"
+
+[widget.audio_visualizer]
+bands = 20
+centered = true
+color_1 = "#678FE4"
+color_2 = "#AB66CC"
+mirrored = true
+reversed = false
+show_when_idle = false
+width = 56

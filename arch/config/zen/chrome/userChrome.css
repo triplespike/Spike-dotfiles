@@ -1,0 +1,194 @@
+@import url("theme-colors.css");
+
+/* Zen Browser 1.24+ — Live Glass/Neon Theme (LWT SSE + theme-colors.css fallback) */
+:root {
+  --zen-live-bg: var(--lwt-accent-color, var(--zen-bg));
+  --zen-live-fg: var(--lwt-text-color, var(--zen-fg));
+  --zen-live-surface: var(--arrowpanel-background, var(--zen-surface));
+  --zen-live-surface-alt: var(--tab-selected-bgcolor, var(--zen-surface-alt));
+  --zen-live-primary: var(--tab-line-color, var(--zen-primary));
+  --zen-live-accent: var(--lwt-toolbarbutton-icon-fill-attention, var(--zen-accent));
+  --zen-live-hover: color-mix(in srgb, var(--toolbar-field-highlight-color, var(--zen-primary)) 45%, transparent);
+  --zen-live-border: color-mix(in srgb, var(--zen-live-primary) 34%, transparent);
+  --zen-live-glow: color-mix(in srgb, var(--zen-live-primary) 32%, transparent);
+  --zen-live-tinted: color-mix(in srgb, var(--zen-live-bg) 92%, var(--zen-live-primary));
+  --zen-live-toolbar: color-mix(in srgb, var(--zen-live-tinted) 76%, transparent);
+  --zen-live-sidebar: color-mix(in srgb, var(--zen-live-surface) 72%, transparent);
+  --zen-live-urlbar: color-mix(in srgb, var(--zen-live-surface) 88%, transparent);
+
+  --zen-themed-toolbar-bg: color-mix(in srgb, var(--zen-live-tinted) 84%, transparent) !important;
+  --zen-themed-toolbar-bg-transparent: var(--zen-live-toolbar) !important;
+  --zen-appcontent-border-color: color-mix(in srgb, var(--zen-live-primary) 36%, transparent) !important;
+  --zen-primary-color: var(--zen-live-primary) !important;
+  --zen-colors-primary: var(--zen-live-primary) !important;
+  --zen-colors-primary-foreground: #FFFFFF !important;
+  --zen-colors-secondary: var(--zen-live-surface-alt) !important;
+  --zen-colors-tertiary: var(--zen-live-surface) !important;
+  --zen-colors-hover-bg: var(--zen-live-hover) !important;
+  --zen-colors-border: var(--zen-live-border) !important;
+  --zen-colors-border-contrast: color-mix(in srgb, var(--zen-live-accent) 48%, transparent) !important;
+  --zen-colors-input-bg: var(--zen-live-surface) !important;
+  --zen-branding-dark: var(--zen-live-bg) !important;
+  --zen-branding-bg: var(--zen-live-bg) !important;
+  --zen-main-browser-background: color-mix(in srgb, var(--zen-live-tinted) 82%, transparent) !important;
+  --zen-main-browser-background-toolbar: var(--zen-live-toolbar) !important;
+  --zen-dialog-background: var(--zen-live-surface) !important;
+  --zen-urlbar-background: var(--zen-live-urlbar) !important;
+  --zen-element-separation: 0px !important;
+}
+
+:root,
+#main-window,
+#zen-main-app-wrapper {
+  background: var(--zen-themed-toolbar-bg-transparent) !important;
+  color: var(--zen-live-fg) !important;
+}
+
+#navigator-toolbox {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#titlebar {
+  background-color: var(--zen-live-sidebar) !important;
+  backdrop-filter: blur(26px) saturate(150%) !important;
+}
+
+/* Верхняя панель, кнопки и индикатор Space */
+#zen-sidebar-top-buttons .toolbarbutton-1,
+#zen-sidebar-foot-buttons .toolbarbutton-1 {
+  border-radius: 10px !important;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.14s ease !important;
+}
+
+#zen-sidebar-top-buttons .toolbarbutton-1:hover,
+#zen-sidebar-foot-buttons .toolbarbutton-1:hover {
+  background-color: var(--zen-live-hover) !important;
+  box-shadow: 0 0 0 1px var(--zen-live-border) !important;
+  transform: translateY(-1px);
+}
+
+#zen-workspaces-button {
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--zen-live-primary) 18%, var(--zen-live-surface)) 0%, color-mix(in srgb, var(--zen-live-accent) 14%, var(--zen-live-surface)) 100%) !important;
+  border: 1px solid var(--zen-live-border) !important;
+  transition: all 0.16s ease !important;
+}
+
+#zen-workspaces-button:hover {
+  border-color: var(--zen-live-primary) !important;
+  box-shadow: 0 0 12px var(--zen-live-glow) !important;
+}
+
+/* Область просмотра контента: вплотную к краям без внутренней рамки */
+#zen-tabbox-wrapper {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#tabbrowser-tabbox,
+#tabbrowser-tabpanels,
+.browserSidebarContainer {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Вкладки: плавный сдвиг, градиент и левый неоновый индикатор */
+.tabbrowser-tab {
+  margin-block: 2px !important;
+}
+
+.tabbrowser-tab .tab-stack {
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.tabbrowser-tab:hover .tab-stack {
+  transform: translateX(3px);
+}
+
+.tabbrowser-tab .tab-background {
+  border-radius: 10px !important;
+  border: 1px solid transparent !important;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.tabbrowser-tab:hover .tab-background {
+  background: var(--zen-live-hover) !important;
+  border-color: var(--zen-live-border) !important;
+}
+
+.tabbrowser-tab[selected="true"] .tab-background,
+.tabbrowser-tab[visuallyselected="true"] .tab-background {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--zen-live-primary) 26%, var(--zen-live-surface)) 0%, color-mix(in srgb, var(--zen-live-accent) 16%, var(--zen-live-surface)) 100%) !important;
+  border: 1px solid var(--zen-live-primary) !important;
+  box-shadow: inset 3px 0 0 var(--zen-live-primary), 0 3px 14px var(--zen-live-glow) !important;
+}
+
+.tabbrowser-tab[selected="true"] .tab-label,
+.tabbrowser-tab[visuallyselected="true"] .tab-label {
+  font-weight: 600 !important;
+  color: #FFFFFF !important;
+}
+
+/* Кнопка новой вкладки в сайдбаре */
+#tabs-newtab-button,
+#zen-tabs-wrapper #tabs-newtab-button {
+  border-radius: 10px !important;
+  border: 1px dashed var(--zen-live-border) !important;
+  margin-top: 4px !important;
+  transition: all 0.16s ease !important;
+}
+
+#tabs-newtab-button:hover {
+  background: var(--zen-live-hover) !important;
+  border-style: solid !important;
+  border-color: var(--zen-live-primary) !important;
+}
+
+/* Адресная строка и выпадающий плавающий URLbar */
+#urlbar,
+#urlbar-background,
+.urlbar-background {
+  border-radius: 12px !important;
+  background-color: var(--zen-live-urlbar) !important;
+  backdrop-filter: blur(22px) saturate(140%) !important;
+  border: 1px solid var(--zen-live-border) !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+#urlbar[focused="true"] > #urlbar-background,
+#urlbar[focused="true"] .urlbar-background,
+#urlbar[open="true"] > #urlbar-background {
+  border-color: var(--zen-live-primary) !important;
+  box-shadow: 0 0 0 2px var(--zen-live-glow), 0 12px 34px var(--zen-shadow) !important;
+}
+
+.urlbarView-row[selected] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--zen-live-primary) 26%, transparent), color-mix(in srgb, var(--zen-live-accent) 18%, transparent)) !important;
+  border-radius: 8px !important;
+}
+
+/* Меню и всплывающие панели */
+menupopup,
+panel[type="arrow"],
+.panel-arrowcontent {
+  --panel-background: var(--zen-live-surface) !important;
+  --panel-color: var(--zen-live-fg) !important;
+  --panel-border-color: var(--zen-live-border) !important;
+  border-radius: 12px !important;
+}
+
+menuitem:hover,
+menu:hover {
+  background-color: var(--zen-live-hover) !important;
+  color: #FFFFFF !important;
+  border-radius: 6px !important;
+}
+
+* {
+  scrollbar-color: var(--zen-live-primary) var(--zen-live-bg) !important;
+  scrollbar-width: thin !important;
+}

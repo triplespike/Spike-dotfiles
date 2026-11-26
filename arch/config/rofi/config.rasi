@@ -1,0 +1,82 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    icon-theme: "Papirus-Dark";
+    font: "JetBrainsMono Nerd Font 11";
+    display-drun: "󰀻 ";
+    display-run: "󰆍 ";
+    display-window: "󱂬 ";
+    drun-display-format: "{name}";
+}
+
+* {
+    bg:          rgba(12, 16, 28, 0.90);
+    bg-alt:      rgba(27, 36, 55, 0.92);
+    fg:          #E8EDFF;
+    fg-muted:    #93A1C6;
+    accent:      #678FE4;
+    border-col:  rgba(103, 143, 228, 0.42);
+    background-color: transparent;
+    text-color: @fg;
+}
+
+window {
+    width: 620px;
+    background-color: @bg;
+    border: 2px solid;
+    border-color: @border-col;
+    border-radius: 16px;
+    padding: 16px;
+}
+
+mainbox {
+    spacing: 12px;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    padding: 10px 14px;
+    border-radius: 12px;
+    background-color: @bg-alt;
+    border: 1px solid;
+    border-color: @border-col;
+    children: [ prompt, entry ];
+}
+
+prompt {
+    text-color: @accent;
+    padding: 0 8px 0 0;
+}
+
+entry {
+    placeholder: "Поиск приложений...";
+    placeholder-color: @fg-muted;
+}
+
+listview {
+    lines: 8;
+    columns: 1;
+    spacing: 6px;
+    scrollbar: false;
+}
+
+element {
+    padding: 8px 12px;
+    border-radius: 10px;
+    spacing: 10px;
+}
+
+element selected {
+    background-color: @bg-alt;
+    border: 1px solid;
+    border-color: @accent;
+    text-color: #FFFFFF;
+}
+
+element-icon {
+    size: 24px;
+}
+
+element-text {
+    vertical-align: 0.5;
+}
