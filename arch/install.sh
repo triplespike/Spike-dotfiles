@@ -37,6 +37,7 @@ warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 
 PACMAN_PKGS=(
   niri ghostty fish starship fastfetch jq rofi
+  dolphin firefox playerctl wireplumber
   grim slurp wl-clipboard cliphist swaybg hyprpicker
   tesseract tesseract-data-eng tesseract-data-rus zbar ffmpeg libnotify
   btop cava bat eza zoxide fzf yazi satty
@@ -104,6 +105,11 @@ install_file "$ARCH_DIR/config/starship.toml"               "$HOME/.config/stars
 install_file "$ARCH_DIR/config/fastfetch/config.jsonc"      "$HOME/.config/fastfetch/config.jsonc" 0644
 install_file "$REPO_DIR/assets/fastfetch/Easy.png"          "$HOME/.config/fastfetch/logo.png" 0644
 install_file "$REPO_DIR/theme-selector.rasi"                "$HOME/.config/rofi/theme-selector.rasi" 0644
+
+mkdir -p "$HOME/.config/environment.d"
+cat > "$HOME/.config/environment.d/90-spike-local-bin.conf" <<'EOF'
+PATH=$HOME/.local/bin:$PATH
+EOF
 
 # Прописываем реальный путь к репозиторию в presets.json (работает даже если репо не в ~/Spike-dotfiles)
 backup_if_exists "$HOME/.config/theme-manager/presets.json"

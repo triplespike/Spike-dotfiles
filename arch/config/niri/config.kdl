@@ -353,14 +353,14 @@
           Mod+T { spawn "ghostty" "--class=ghostty-scratch" "--title=Scratchpad"; }
 
           // Файловый менеджер Dolphin
-          Mod+E { spawn "dolphin"; }
+          Mod+E { spawn "sh" "-c" "for fm in dolphin nautilus thunar nemo pcmanfm; do command -v $fm >/dev/null && exec $fm; done; notify-send 'Niri' 'Файловый менеджер не найден (установите dolphin)'"; }
 
           // Браузеры (Zen по Mod+B, классический Firefox по Mod+Shift+B)
-          Mod+B { spawn "sh" "-c" "for b in zen-browser zen-beta firefox; do command -v $b >/dev/null && exec $b; done"; }
+          Mod+B { spawn "sh" "-c" "for b in zen-browser zen-beta firefox chromium google-chrome-stable brave; do command -v $b >/dev/null && exec $b; done; notify-send 'Niri' 'Браузер не найден (установите zen-browser или firefox)'"; }
           Mod+Shift+B { spawn "firefox"; }
 
           // Музыкальный плеер Spotify (Spicetify)
-          Mod+M { spawn "spotify"; }
+          Mod+M { spawn "sh" "-c" "for m in spotify spotify-launcher cider youtube-music; do command -v $m >/dev/null && exec $m; done; notify-send 'Niri' 'Spotify не установлен'"; }
 
           // Лаунчер приложений Noctalia (поиск)
           Mod+D { spawn "sh" "-c" "if command -v noctalia >/dev/null && pgrep -x noctalia >/dev/null; then exec noctalia msg panel-toggle launcher; else exec rofi -show drun; fi"; }
@@ -371,11 +371,11 @@
           Mod+P { spawn "noctalia" "msg" "settings-toggle"; }
 
           // Быстрые панели Noctalia
-          Mod+Tab { spawn "noctalia" "msg" "window-switcher"; }
+          Mod+Tab { spawn "sh" "-c" "if command -v noctalia >/dev/null && pgrep -x noctalia >/dev/null; then exec noctalia msg window-switcher; else exec rofi -show window; fi"; }
           Mod+X { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
           // Меню тем оформления (Noctalia dmenu)
-          Mod+Shift+T { spawn "theme-menu"; }
+          Mod+Shift+T { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec theme-menu"; }
 
           // ------------------------------------------------------
           //                   Управление окнами
@@ -471,9 +471,9 @@
           //       Мультимедиа и громкость (Noctalia IPC OSD)
           // ------------------------------------------------------
 
-          XF86AudioRaiseVolume allow-when-locked=true { spawn "noctalia" "msg" "volume-up"; }
-          XF86AudioLowerVolume allow-when-locked=true { spawn "noctalia" "msg" "volume-down"; }
-          XF86AudioMute        allow-when-locked=true { spawn "noctalia" "msg" "volume-mute"; }
+          XF86AudioRaiseVolume allow-when-locked=true { spawn "sh" "-c" "if command -v noctalia >/dev/null && pgrep -x noctalia >/dev/null; then exec noctalia msg volume-up; else exec wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+; fi"; }
+          XF86AudioLowerVolume allow-when-locked=true { spawn "sh" "-c" "if command -v noctalia >/dev/null && pgrep -x noctalia >/dev/null; then exec noctalia msg volume-down; else exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-; fi"; }
+          XF86AudioMute        allow-when-locked=true { spawn "sh" "-c" "if command -v noctalia >/dev/null && pgrep -x noctalia >/dev/null; then exec noctalia msg volume-mute; else exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle; fi"; }
 
           XF86MonBrightnessUp   allow-when-locked=true { spawn "noctalia" "msg" "brightness-up"; }
           XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia" "msg" "brightness-down"; }
@@ -493,16 +493,16 @@
           // ------------------------------------------------------
           //                 Экранные и медиа-утилиты
           // ------------------------------------------------------
-          Mod+Shift+O { spawn "ocr-grab"; }
-          Mod+Shift+R { spawn "qr-scan"; }
-          Mod+Ctrl+C  { spawn "color-pick"; }
-          Mod+Shift+M { spawn "songrec-grab"; }
+          Mod+Shift+O { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec ocr-grab"; }
+          Mod+Shift+R { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec qr-scan"; }
+          Mod+Ctrl+C  { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec color-pick"; }
+          Mod+Shift+M { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec songrec-grab"; }
 
           // ------------------------------------------------------
           //                  OBS Studio Recording
           // ------------------------------------------------------
-          F9 { spawn "obs-control" "toggle-record"; }
-          F8 { spawn "obs-control" "toggle-pause"; }
+          F9 { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec obs-control toggle-record"; }
+          F8 { spawn "sh" "-c" "PATH=\"$HOME/.local/bin:$PATH\" exec obs-control toggle-pause"; }
       }
 
       // Динамическая тема оформления (управляется theme-manager)
