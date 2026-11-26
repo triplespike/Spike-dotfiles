@@ -8,18 +8,21 @@ palette previews, keyboard and mouse navigation.
 import os
 import sys
 
-# Force OpenGL renderer for GTK4 on NVIDIA Wayland (avoids Vulkan swapchain out of date bug)
-os.environ["GSK_RENDERER"] = "gl"
+# Respect user override; prefer GL on NVIDIA Wayland to avoid GTK4 Vulkan swapchain issues
+if "GSK_RENDERER" not in os.environ and os.path.exists("/dev/nvidia0"):
+    os.environ["GSK_RENDERER"] = "gl"
 
-# Fallback GI_TYPELIB_PATH if not set by wrapper
+# Fallback GI_TYPELIB_PATH on NixOS if not set by wrapper (leave untouched on Arch/standard distros)
 if "GI_TYPELIB_PATH" not in os.environ:
-    current_user = os.environ.get("USER", "spike")
+    current_user = os.environ.get("USER", "")
     fallback_paths = [
-        f"/etc/profiles/per-user/{current_user}/lib/girepository-1.0",
+        f"/etc/profiles/per-user/{current_user}/lib/girepository-1.0" if current_user else "",
         "/run/current-system/sw/lib/girepository-1.0",
         os.path.expanduser("~/.local/state/nix/profiles/home-manager/home-path/lib/girepository-1.0"),
     ]
-    os.environ["GI_TYPELIB_PATH"] = ":".join(p for p in fallback_paths if os.path.isdir(p))
+    existing = [p for p in fallback_paths if p and os.path.isdir(p)]
+    if existing:
+        os.environ["GI_TYPELIB_PATH"] = ":".join(existing)
 
 import json
 import subprocess

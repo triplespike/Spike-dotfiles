@@ -1,20 +1,19 @@
-# Spike-dotfiles: NixOS System Configuration
-# Daily-driver setup with Niri scroll-compositor, Noctalia desktop shell, and NVIDIA Wayland stack.
+# Edit this configuration file to define what should be installed on
+# your system.  Help is available in the configuration.nix(5) man page
+# and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, lib, ... }:
 
 {
   imports = [
-    # Include hardware configuration (falls back to example if not yet generated)
-    (if builtins.pathExists ./hardware-configuration.nix
-     then ./hardware-configuration.nix
-     else ./hardware-configuration.nix.example)
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./performance.nix
   ];
 
   # ==========================================================
   #                        Boot / Bootloader
   # ==========================================================
-  zramSwap.enable = true;
 
   boot.loader.systemd-boot.enable = false;
 
@@ -35,8 +34,11 @@
 
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Высокопроизводительное ядро CachyOS с планировщиком BORE и оптимизациями x86-64-v3
-  boot.kernelPackages = pkgs.linuxPackages_cachyos-bore;
+  # Разрешаем TRIM / discard для зашифрованного NVMe SSD (LUKS)
+  boot.initrd.luks.devices."cryptroot".allowDiscards = true;
+
+  # Zen-ядро с низкими задержками для десктопа и игр
+  boot.kernelPackages = pkgs.linuxPackages_zen;
 
   # ==========================================================
   #                        Networking
@@ -45,7 +47,17 @@
   networking.hostName = "nixos";
   networking.networkmanager.enable = true;
 
-  # Resolved for DNS handling
+  # Разрешаем асимметричный трафик туннеля (критично для UDP в Discord)
+  networking.firewall.checkReversePath = "loose";
+
+  # Делаем виртуальные интерфейсы VPN доверенными (Throne)
+  networking.firewall.trustedInterfaces = [ "throne-tun" "tun0" "singbox-tun" ];
+
+  # Разрешаем локальный порт для Clipper Studio (Wi-Fi передача на телефон)
+  networking.firewall.allowedTCPPorts = [ 8080 ];
+
+
+  # Корректная работа DNS внутри туннеля
   services.resolved.enable = true;
 
   # ==========================================================
@@ -53,31 +65,70 @@
   # ==========================================================
 
   time.timeZone = "Europe/Moscow";
-  i18n.defaultLocale = "en_US.UTF-8";
+  i18n.defaultLocale = "ru_RU.UTF-8";
 
   i18n.extraLocaleSettings = {
-    LC_ADDRESS = "en_US.UTF-8";
-    LC_IDENTIFICATION = "en_US.UTF-8";
-    LC_MEASUREMENT = "en_US.UTF-8";
-    LC_MONETARY = "en_US.UTF-8";
-    LC_NAME = "en_US.UTF-8";
-    LC_NUMERIC = "en_US.UTF-8";
-    LC_PAPER = "en_US.UTF-8";
-    LC_TELEPHONE = "en_US.UTF-8";
-    LC_TIME = "en_US.UTF-8";
+    LC_ADDRESS = "ru_RU.UTF-8";
+    LC_IDENTIFICATION = "ru_RU.UTF-8";
+    LC_MEASUREMENT = "ru_RU.UTF-8";
+    LC_MONETARY = "ru_RU.UTF-8";
+    LC_NAME = "ru_RU.UTF-8";
+    LC_NUMERIC = "ru_RU.UTF-8";
+    LC_PAPER = "ru_RU.UTF-8";
+    LC_TELEPHONE = "ru_RU.UTF-8";
+    LC_TIME = "ru_RU.UTF-8";
   };
 
   # ==========================================================
   #                        Desktop / Display
   # ==========================================================
 
-  # X11 compatibility layer
+  # X11 (нужен даже под Wayland-сессии для совместимости со старыми программами)
   services.xserver.enable = true;
 
-  # Plasma 6 optional fallback
-  services.desktopManager.plasma6.enable = true;
+  # Фантомная Plasma 6 отключена — используется чистый Niri.
+  # Polkit-агент для графических запросов пароля (sudo/pkexec) в сессии Niri:
+  systemd.user.services.polkit-kde-authentication-agent-1 = {
+    description = "polkit-kde-authentication-agent-1";
+    wantedBy = [ "graphical-session.target" ];
+    wants = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
+      Restart = "on-failure";
+      RestartSec = 1;
+      TimeoutStopSec = 10;
+    };
+  };
 
-  # SDDM Display Manager with Astronaut Theme
+  # Правила Polkit: беспарольное управление службами и вызов systemctl для Gamer Mode (группа wheel)
+  security.polkit = {
+    enable = true;
+    extraConfig = ''
+      polkit.addRule(function(action, subject) {
+        if (subject.isInGroup("wheel")) {
+          // 1. Управление юнитами systemd (через D-Bus)
+          if (action.id === "org.freedesktop.systemd1.manage-units") {
+            return polkit.Result.YES;
+          }
+          // 2. Вызовы pkexec systemctl (плагин Gamer Mode в Noctalia)
+          if (action.id === "org.freedesktop.policykit.exec") {
+            var prog = action.lookup("program");
+            if (prog && (prog === "/run/current-system/sw/bin/systemctl" || prog.indexOf("/bin/systemctl") >= 0)) {
+              return polkit.Result.YES;
+            }
+          }
+          // 3. Беспарольное управление DNS и сброс кэша (Throne TUN / systemd-resolved)
+          if (action.id.indexOf("org.freedesktop.resolve1.") === 0) {
+            return polkit.Result.YES;
+          }
+        }
+      });
+    '';
+  };
+
+  # Настройка SDDM под Qt6 и тему Astronaut
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = true;
@@ -104,7 +155,14 @@
     WLR_NO_HARDWARE_CURSORS = "1";
   };
 
-  # Niri scroll-compositor
+  # Темизация Qt/KDE (Dolphin и др.) без фоновых демонов Plasma
+  qt = {
+    enable = true;
+    platformTheme = "kde";
+    style = "breeze";
+  };
+
+  # Бесконечный скролл-композитор Niri
   programs.niri.enable = true;
 
   xdg.portal = {
@@ -121,6 +179,7 @@
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
+    maple-mono.Normal-NF
   ];
 
   # ==========================================================
@@ -134,13 +193,13 @@
 
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = false;
+    # powerManagement.enable задаётся в performance.nix
     open = false;
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.latest;
   };
 
-  # Fix: Frame hitching / buffer limits in Wayland compositors on NVIDIA
+  # ВСТАВИТЬ СЮДА: Фикс зависания кадров в играх под Niri на NVIDIA
   environment.etc."nvidia/nvidia-application-profiles-rc.d/50-limit-free-buffer-pool-in-wayland-compositors.json".text = ''
     {
       "rules": [
@@ -173,13 +232,16 @@
     alsa.support32Bit = true;
     pulse.enable = true;
 
+    # Настройки для гарнитуры Temple Pro Black (чип XiiSound):
+    # - программный микшер (чип искажает аппаратную громкость)
+    # - выравнивание квантов и буфера под 1024 сэмпла для устранения помех/дропов на адаптивном USB
     wireplumber.extraConfig = {
       "10-disable-hw-volume" = {
         "monitor.alsa.rules" = [
           {
             matches = [
               {
-                "node.name" = "~alsa_output.*";
+                "device.name" = "~alsa_card.usb-XiiSound.*";
               }
             ];
             actions = {
@@ -189,27 +251,43 @@
               };
             };
           }
+          {
+            matches = [
+              {
+                "node.name" = "~alsa_output.usb-XiiSound.*";
+              }
+            ];
+            actions = {
+              update-props = {
+                "api.alsa.soft-mixer" = true;
+                "api.alsa.ignore-dB" = true;
+                "api.alsa.headroom" = 1024;
+                "api.alsa.period-size" = 1024;
+                "node.latency" = "1024/48000";
+                "session.suspend-timeout-seconds" = 0;
+              };
+            };
+          }
         ];
       };
     };
   };
 
   # ==========================================================
-  #                        Printing
+  #                 Disabled Unused Services
   # ==========================================================
 
-  services.printing = {
-    enable = true;
-    drivers = with pkgs; [ gutenprint cups-filters ];
-  };
+  # Печать отключена (CUPS, драйверы и GUI-апплет принтера)
+  services.printing.enable = false;
+  services.avahi.enable = false;
+  programs.system-config-printer.enable = false;
 
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
+  # Отключение лишних системных служб:
+  # ModemManager — опрос 3G/4G/LTE модемов с SIM-картами (не нужен на стационарном ПК)
+  systemd.services.ModemManager.enable = false;
 
-  programs.system-config-printer.enable = true;
+  # Синтез речи / экранный диктор
+  systemd.user.services.speech-dispatcher.enable = false;
 
   # ==========================================================
   #                        Users
@@ -219,41 +297,103 @@
     isNormalUser = true;
     description = "Spike";
     shell = pkgs.fish;
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "dialout" "uucp" ];
+  };
+
+  # Разрешаем доступ к платам ESP8266/ESP32 и микроконтроллерам без sudo
+  services.udev.extraRules = ''
+    KERNEL=="ttyUSB[0-9]*", MODE="0666"
+    KERNEL=="ttyACM[0-9]*", MODE="0666"
+  '';
+
+  # ==========================================================
+  #                 Maintenance & Optimization
+  # ==========================================================
+
+  # Периодический TRIM для поддержания скорости и ресурса SSD/NVMe
+  services.fstrim.enable = true;
+
+  # Автоматическая ежемесячная проверка целостности Btrfs
+  services.btrfs.autoScrub = {
+    enable = true;
+    interval = "monthly";
+    fileSystems = [ "/" ];
   };
 
   # ==========================================================
   #                        Programs
   # ==========================================================
 
+  # Утилита nh (Nix CLI Helper) для удобного управления конфигурацией и ротации поколений
+  programs.nh = {
+    enable = true;
+    flake = "/etc/nixos";
+    clean = {
+      enable = true;
+      extraArgs = "--keep 5 --keep-since 3d";
+    };
+  };
+
   programs.nix-ld.enable = true;
-  programs.gamemode.enable = true;
+
   programs.gpu-screen-recorder.enable = true;
 
   programs.steam = {
-    enable = true;
-    remotePlay.openFirewall = true;
+      enable = true;
+      remotePlay.openFirewall = true;
 
-    extraCompatPackages = with pkgs; [
+      extraCompatPackages = with pkgs; [
       proton-ge-bin
     ];
 
-    extraPackages = with pkgs; [
+      extraPackages = with pkgs; [
       catppuccin-cursors.mochaDark
     ];
   };
 
+
+  programs.throne = {
+    enable = true;
+    tunMode.enable = true;
+  };
+
+  # ==========================================================
+  #                 Virtualisation / Containers
+  # ==========================================================
+
+  virtualisation.podman = {
+    enable = true;
+    dockerCompat = true;
+    defaultNetwork.settings.dns_enabled = true;
+  };
+
+  hardware.nvidia-container-toolkit.enable = true;
+
+  # Fish остаётся системным login shell; пользовательские настройки живут в home.nix.
   programs.fish.enable = true;
 
   # ==========================================================
-  #                        Services & Filesystems
+  #                        Services
   # ==========================================================
 
   services.flatpak.enable = true;
 
-  # Example additional disk mounts:
+  # Демоны для работы с дисками, разделами и флешками (критично для Dolphin и мест в сайдбаре)
+  services.udisks2.enable = true;
+  services.gvfs.enable = true;
+
+  # ==========================================================
+  #                        Filesystems
+  # ==========================================================
+  # Пример монтирования дополнительных дисков (замените UUID на свои):
   # fileSystems."/mnt/storage" = {
-  #   device = "/dev/disk/by-uuid/YOUR-DISK-UUID";
+  #   device = "/dev/disk/by-uuid/<YOUR-STORAGE-UUID>";
+  #   fsType = "ext4";
+  #   options = [ "defaults" "nofail" ];
+  # };
+  #
+  # fileSystems."/mnt/ssd" = {
+  #   device = "/dev/disk/by-uuid/<YOUR-SSD-UUID>";
   #   fsType = "ext4";
   #   options = [ "defaults" "nofail" ];
   # };
@@ -265,7 +405,7 @@
   nixpkgs.config.allowUnfree = true;
 
   environment.systemPackages = with pkgs; [
-    # SDDM Astronaut theme (Black Hole preset)
+    # Тема SDDM Astronaut (пресет Black Hole + шрифты)
     (pkgs.stdenv.mkDerivation {
       name = "sddm-astronaut-theme";
       src = pkgs.fetchFromGitHub {
@@ -279,14 +419,37 @@
         cp -r * $out/share/sddm/themes/sddm-astronaut-theme/
         cd $out/share/sddm/themes/sddm-astronaut-theme
 
+        # 1. Указываем пресет Black Hole в манифесте
         sed -i 's|ConfigFile=.*|ConfigFile=Themes/black_hole.conf|' metadata.desktop
+
+        # 2. Перезаписываем theme.conf
         cp -f Themes/black_hole.conf theme.conf
 
+        # 3. Устанавливаем шрифты темы
         mkdir -p $out/share/fonts
         cp -r Fonts/* $out/share/fonts/ 2>/dev/null || true
       '';
     })
+    alsa-utils
+    kdePackages.breeze-icons
+    kdePackages.qqc2-desktop-style
+    kdePackages.ffmpegthumbs
+    kdePackages.kdegraphics-thumbnailers
+    kdePackages.kimageformats
+    ffmpegthumbnailer
   ];
+
+  # ==========================================================
+  #                        SUID wrappers / misc
+  # ==========================================================
+
+  # programs.mtr.enable = true;
+  # programs.gnupg.agent = {
+  #   enable = true;
+  #   enableSSHSupport = true;
+  # };
+
+  # services.openssh.enable = true;
 
   # ==========================================================
   #                        Nix settings
@@ -302,6 +465,10 @@
     dates = [ "weekly" ];
   };
 
-  # State version
+  # ==========================================================
+  #                        State version
+  # ==========================================================
+
+  # НЕ менять после первой установки без прочтения release notes
   system.stateVersion = "26.05";
 }

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Распознавание играющего трека через SongRec -> буфер обмена.
+set -euo pipefail
+
+app="Распознавание музыки"
+need() { command -v "$1" >/dev/null 2>&1 || { notify-send -u normal "$app" "Не найдена утилита: $1"; exit 1; }; }
+
+for c in songrec wl-copy notify-send; do need "$c"; done
+
+notify-send -u low "$app" "Слушаю..."
+result="$(songrec recognize 2>/dev/null || true)"
+
+if [ -z "$result" ]; then
+  notify-send -u normal "$app" "Трек не распознан"
+  exit 0
+fi
+
+printf '%s' "$result" | wl-copy
+notify-send -u normal "$app" "$result"

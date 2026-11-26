@@ -132,30 +132,47 @@
 
 ---
 
+## 🐧 Arch Linux / CachyOS / EndeavourOS
+
+Для Arch-подобных дистрибутивов подготовлен отдельный портативный комплект в [`arch/`](arch/README.md) (без NixOS-зависимостей, с автоопределением монитора, сборкой `ryoku-livewall`, локальными обоями и `install.sh`):
+
+```bash
+git clone https://github.com/triplespike/Spike-dotfiles.git ~/Spike-dotfiles
+cd ~/Spike-dotfiles
+./arch/install.sh
+```
+
+Подробнее — в [arch/README.md](arch/README.md).
+
+---
+
 ## 🚀 Structure & How to Explore
 
 ```
 Spike-dotfiles/
+├── arch/                       # Portable Arch / CachyOS / EndeavourOS setup + install.sh
 ├── assets/
 │   ├── fastfetch/Easy.png      # Fastfetch anime art logo
 │   ├── screenshots/            # 1080p showcase screenshots
-│   ├── wallpapers/             # Static and animated video wallpapers
+│   ├── wallpapers/             # Static and animated seamless video wallpapers
 │   ├── showcase.webp           # Beat-drop theme switcher animated preview
 │   └── showcase.mp4            # Full 1080p 60fps showcase video with audio
-├── pkgs/
-│   └── riff.nix                # Custom Nix derivation for Riff music player
-├── scripts/
-│   └── theme-menu-gui.py       # GTK4 / Libadwaita theme switcher interface
 ├── config/
 │   └── theme-manager/presets.json # Theme presets, palettes, and wallpaper mappings
-├── patches/
-│   └── noctalia-bar-capsule-blur.patch # C++ patch for rounded capsule blur in Noctalia
+├── home/                       # Modular Home Manager configs (theme-manager, shell, apps, desktop)
+├── patches/                    # Noctalia C++ patches (capsule blur, tab nav, wpa fix)
+├── pkgs/                       # Custom Nix packages (riff.nix, livewall.nix)
+├── scripts/                    # Theme injectors, Zen SSE bridge, autopause, OCR/QR/picker/compress
+├── vendor/ryoku/               # Vendored livewall.c and signed Zen live-palette XPI
+├── zen-newtab/                 # Custom theme-synced Zen Browser newtab page
+├── zen-browser.nix             # Declarative Zen Browser module
 ├── theme-selector.rasi         # Custom Rofi theme switcher stylesheet
 ├── niri.kdl                    # Niri scroll-compositor window rules and binds
-├── configuration.nix           # System-level NixOS configuration
-├── flake.nix                   # Flake inputs & multi-host system declaration
+├── configuration.nix           # System-level NixOS configuration (UUIDs masked)
+├── performance.nix             # System/audio/gaming tuning module
+├── flake.nix                   # Flake inputs & system declaration
 ├── hardware-configuration.nix.example # Hardware config template
-├── home.nix                    # Home Manager declaration: Niri, Noctalia, Themes, Ghostty
+├── home.nix                    # Home Manager entry point
 ├── LICENSE                     # MIT License
 └── README.md                   # Project documentation
 ```

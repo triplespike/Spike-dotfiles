@@ -1,0 +1,300 @@
+#!/usr/bin/env bash
+# Портативный переключатель тем (Arch / Wayland / Niri)
+set -euo pipefail
+
+export PATH="$HOME/.local/bin:$PATH"
+
+TARGET_ID="${1:-}"
+PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+STATE_DIR="$HOME/.local/state/theme-manager"
+NIRI_DIR="$HOME/.config/niri"
+GHOSTTY_DIR="$HOME/.config/ghostty"
+CAVA_DIR="$HOME/.config/cava"
+BTOP_DIR="$HOME/.config/btop"
+
+mkdir -p "$STATE_DIR" "$NIRI_DIR" "$GHOSTTY_DIR" "$CAVA_DIR" "$BTOP_DIR/themes"
+
+if [ ! -f "$PRESETS_FILE" ]; then
+  echo "Файл пресетов не найден: $PRESETS_FILE" >&2
+  exit 1
+fi
+
+if [ -z "$TARGET_ID" ]; then
+  if [ -f "$STATE_DIR/current" ]; then
+    TARGET_ID="$(cat "$STATE_DIR/current")"
+  else
+    TARGET_ID="nullscapes"
+  fi
+fi
+
+PRESET="$(jq -c --arg id "$TARGET_ID" '.presets[] | select(.id == $id)' "$PRESETS_FILE" | head -n1)"
+if [ -z "$PRESET" ]; then
+  echo "Пресет '$TARGET_ID' не найден в $PRESETS_FILE" >&2
+  exit 1
+fi
+
+NAME="$(echo "$PRESET" | jq -r '.name')"
+ICON="$(echo "$PRESET" | jq -r '.icon // "🎨"')"
+WP_TYPE="$(echo "$PRESET" | jq -r '.wallpaper.type // "video"')"
+SCREEN="$(echo "$PRESET" | jq -r '.wallpaper.screen // "auto"')"
+
+# Автоопределение первого активного монитора Niri
+if [ -z "$SCREEN" ] || [ "$SCREEN" = "auto" ]; then
+  if command -v niri >/dev/null 2>&1; then
+    SCREEN="$(niri msg -j outputs 2>/dev/null | jq -r 'keys[0] // ""' || true)"
+  fi
+  SCREEN="${SCREEN:-HDMI-A-1}"
+fi
+
+stop_wallpapers() {
+  pkill -CONT -f '(^|/)\.?linux-wallpaperengine([[:space:]]|$)' >/dev/null 2>&1 || true
+  pkill -CONT -f '(^|/)\.?ryoku-livewall([[:space:]]|$)' >/dev/null 2>&1 || true
+  pkill -CONT -f '(^|/)\.?mpvpaper(-wrapped)?([[:space:]]|$)' >/dev/null 2>&1 || true
+  pkill -CONT -x swaybg >/dev/null 2>&1 || true
+  systemctl --user stop theme-wallpaper-video.service theme-wallpaper-engine.service >/dev/null 2>&1 || true
+  systemctl --user reset-failed theme-wallpaper-video.service theme-wallpaper-engine.service >/dev/null 2>&1 || true
+  pkill -9 -f '(^|/)\.?linux-wallpaperengine([[:space:]]|$)' >/dev/null 2>&1 || true
+  pkill -9 -f '(^|/)\.?ryoku-livewall([[:space:]]|$)' >/dev/null 2>&1 || true
+  pkill -9 -f '(^|/)\.?mpvpaper(-wrapped)?([[:space:]]|$)' >/dev/null 2>&1 || true
+  pkill -9 -x swaybg >/dev/null 2>&1 || true
+  sleep 0.15
+}
+
+set_static_bg() {
+  local img="$1"
+  [ -n "$img" ] && [ -f "$img" ] || return 0
+  if command -v noctalia >/dev/null 2>&1 && pgrep -x noctalia >/dev/null 2>&1; then
+    noctalia msg wallpaper-set "$img" >/dev/null 2>&1 || true
+  elif command -v swaybg >/dev/null 2>&1; then
+    systemd-run --user --collect --unit=theme-wallpaper-video swaybg -o "$SCREEN" -i "$img" -m fill >/dev/null 2>&1 || swaybg -o "$SCREEN" -i "$img" -m fill >/dev/null 2>&1 &
+  fi
+}
+
+# 1. Обои (ryoku-livewall -> mpvpaper -> fallback image)
+FALLBACK="$(echo "$PRESET" | jq -r '.wallpaper.fallback_image // ""')"
+FALLBACK="${FALLBACK/#\~/$HOME}"
+
+if [ "$WP_TYPE" = "video" ]; then
+  WP_PATH="$(echo "$PRESET" | jq -r '.wallpaper.path // ""')"
+  WP_PATH="${WP_PATH/#\~/$HOME}"
+  stop_wallpapers
+  [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ] && set_static_bg "$FALLBACK"
+
+  if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
+    STARTED=0
+    if command -v ryoku-livewall >/dev/null 2>&1; then
+      systemd-run --user --collect --unit=theme-wallpaper-video \
+        ryoku-livewall "$WP_PATH" 1920 fill "$SCREEN" >/dev/null 2>&1 || true
+      sleep 0.4
+      systemctl --user is-active --quiet theme-wallpaper-video.service && STARTED=1
+    fi
+    if [ "$STARTED" -eq 0 ] && command -v mpvpaper >/dev/null 2>&1; then
+      systemd-run --user --collect --unit=theme-wallpaper-video \
+        mpvpaper -p -l background -o "no-audio loop hwdec=auto-safe" "$SCREEN" "$WP_PATH" >/dev/null 2>&1 || true
+      sleep 0.4
+    fi
+  fi
+elif [ "$WP_TYPE" = "wallpaperengine" ]; then
+  WE_ID="$(echo "$PRESET" | jq -r '.wallpaper.id // .wallpaper.workshop_id // ""')"
+  stop_wallpapers
+  [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ] && set_static_bg "$FALLBACK"
+  if [ -n "$WE_ID" ] && command -v linux-wallpaperengine >/dev/null 2>&1 && [ -d "$HOME/.local/share/Steam/steamapps/workshop/content/431960/$WE_ID" ]; then
+    systemd-run --user --collect --unit=theme-wallpaper-engine \
+      --setenv=SDL_AUDIODRIVER=dummy --setenv=PIPEWIRE_AUTOCONNECT=false \
+      linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_ID" --volume 0 --silent --no-audio-processing --noautomute --clamp clamp >/dev/null 2>&1 || true
+  fi
+else
+  WP_PATH="$(echo "$PRESET" | jq -r '.wallpaper.path // .wallpaper.fallback_image // ""')"
+  WP_PATH="${WP_PATH/#\~/$HOME}"
+  stop_wallpapers
+  set_static_bg "$WP_PATH"
+fi
+
+# 2. Палитра Noctalia (если запущена)
+if command -v noctalia >/dev/null 2>&1 && pgrep -x noctalia >/dev/null 2>&1; then
+  NOCTALIA_SRC="$(echo "$PRESET" | jq -r '.noctalia.source // "custom"')"
+  NOCTALIA_PAL="$(echo "$PRESET" | jq -r '.noctalia.palette // "Nullscapes"')"
+  noctalia msg color-scheme-set "$NOCTALIA_SRC" "$NOCTALIA_PAL" >/dev/null 2>&1 || true
+fi
+
+# 3. Цвета Niri
+RING_FROM="$(echo "$PRESET" | jq -r '.niri.focus_ring.from // "#678FE4"')"
+RING_TO="$(echo "$PRESET" | jq -r '.niri.focus_ring.to // "#AB66CC"')"
+RING_ANGLE="$(echo "$PRESET" | jq -r '.niri.focus_ring.angle // 135')"
+TAB_FROM="$(echo "$PRESET" | jq -r '.niri.tab_indicator.from // "#678FE4"')"
+TAB_TO="$(echo "$PRESET" | jq -r '.niri.tab_indicator.to // "#AB66CC"')"
+TAB_ANGLE="$(echo "$PRESET" | jq -r '.niri.tab_indicator.angle // 90')"
+TAB_INACTIVE="$(echo "$PRESET" | jq -r '.niri.tab_indicator.inactive // "#1B243788"')"
+SHADOW_COL="$(echo "$PRESET" | jq -r '.niri.shadow // "#050711cc"')"
+OVERVIEW_BG="$(echo "$PRESET" | jq -r '.niri.overview_backdrop // "#080B16dd"')"
+
+cat <<EOF > "$NIRI_DIR/theme.kdl.tmp"
+layout {
+    focus-ring {
+        width 2.5
+        active-gradient from="$RING_FROM" to="$RING_TO" angle=$RING_ANGLE relative-to="workspace-view"
+        inactive-color "transparent"
+    }
+
+    tab-indicator {
+        hide-when-single-tab
+        place-within-column
+        gap 6
+        width 4
+        length total-proportion=0.85
+        position "top"
+        active-gradient from="$TAB_FROM" to="$TAB_TO" angle=$TAB_ANGLE
+        inactive-color "$TAB_INACTIVE"
+        corner-radius 6
+    }
+
+    shadow {
+        on
+        softness 42
+        spread 5
+        offset x=0 y=10
+        color "$SHADOW_COL"
+    }
+}
+
+overview {
+    backdrop-color "$OVERVIEW_BG"
+}
+EOF
+mv "$NIRI_DIR/theme.kdl.tmp" "$NIRI_DIR/theme.kdl"
+command -v niri >/dev/null 2>&1 && niri msg action load-config-file >/dev/null 2>&1 || true
+
+# 4. Цвета Ghostty
+GH_BG="$(echo "$PRESET" | jq -r '.ghostty.background // "080B16"')"
+GH_FG="$(echo "$PRESET" | jq -r '.ghostty.foreground // "E8EDFF"')"
+GH_CUR="$(echo "$PRESET" | jq -r '.ghostty.cursor_color // "#A8B7FF"')"
+GH_SEL_BG="$(echo "$PRESET" | jq -r '.ghostty.selection_background // "#344879"')"
+GH_SEL_FG="$(echo "$PRESET" | jq -r '.ghostty.selection_foreground // "#FFFFFF"')"
+
+{
+  echo "# Auto-generated by theme-apply for preset: $TARGET_ID"
+  echo "background = $GH_BG"
+  echo "foreground = $GH_FG"
+  echo "cursor-color = $GH_CUR"
+  echo "selection-background = $GH_SEL_BG"
+  echo "selection-foreground = $GH_SEL_FG"
+  echo "$PRESET" | jq -r '.ghostty.palette[] | "palette = \(.)"'
+} > "$GHOSTTY_DIR/theme.conf.tmp"
+mv "$GHOSTTY_DIR/theme.conf.tmp" "$GHOSTTY_DIR/theme.conf"
+pkill -USR2 ghostty >/dev/null 2>&1 || true
+
+# 5. Lavat
+LAVA_COLOR="$(echo "$PRESET" | jq -r '.lavat.color // "678FE4"')"
+LAVA_RIM="$(echo "$PRESET" | jq -r '.lavat.rim // "AB66CC"')"
+cat <<EOF > "$STATE_DIR/lavat.conf"
+COLOR="$LAVA_COLOR"
+RIM="$LAVA_RIM"
+EOF
+pkill -USR1 -f "/.*bin/lava" >/dev/null 2>&1 || true
+
+# 6. Cava
+CAVA_1="$(echo "$PRESET" | jq -r '.cava.gradient[0] // "#678FE4"')"
+CAVA_2="$(echo "$PRESET" | jq -r '.cava.gradient[1] // "#715CD6"')"
+CAVA_3="$(echo "$PRESET" | jq -r '.cava.gradient[2] // "#8A91E8"')"
+CAVA_4="$(echo "$PRESET" | jq -r '.cava.gradient[3] // "#AB66CC"')"
+CAVA_5="$(echo "$PRESET" | jq -r '.cava.gradient[4] // "#FD4663"')"
+cat <<EOF > "$CAVA_DIR/config.tmp"
+[general]
+framerate = 75
+autosens = 1
+bars = 0
+bar_width = 2
+bar_spacing = 1
+
+[input]
+method = pipewire
+source = auto
+
+[output]
+method = ncurses
+channels = stereo
+
+[color]
+gradient = 1
+gradient_count = 5
+gradient_color_1 = '$CAVA_1'
+gradient_color_2 = '$CAVA_2'
+gradient_color_3 = '$CAVA_3'
+gradient_color_4 = '$CAVA_4'
+gradient_color_5 = '$CAVA_5'
+
+[smoothing]
+monstercat = 1
+waves = 0
+gravity = 100
+EOF
+mv "$CAVA_DIR/config.tmp" "$CAVA_DIR/config"
+pkill -SIGUSR1 cava >/dev/null 2>&1 || true
+
+# 7. Btop
+BTOP_BG="#${GH_BG#\#}"
+BTOP_FG="#${GH_FG#\#}"
+BTOP_MUTED="$(echo "$PRESET" | jq -r '.ghostty.palette[8] // "8=#46516F"' | cut -d= -f2)"
+cat <<EOF > "$BTOP_DIR/themes/$TARGET_ID.theme.tmp"
+theme[main_bg]=""
+theme[main_fg]="$BTOP_FG"
+theme[title]="$BTOP_FG"
+theme[hi_fg]="$CAVA_1"
+theme[selected_bg]="$GH_SEL_BG"
+theme[selected_fg]="$GH_SEL_FG"
+theme[inactive_fg]="$BTOP_MUTED"
+theme[graph_text]="$BTOP_FG"
+theme[meter_bg]="$BTOP_MUTED"
+theme[proc_misc]="$CAVA_2"
+theme[cpu_box]="$CAVA_1"
+theme[mem_box]="$CAVA_2"
+theme[net_box]="$CAVA_3"
+theme[proc_box]="$CAVA_4"
+theme[div_line]="$BTOP_MUTED"
+theme[temp_start]="$CAVA_1"
+theme[temp_mid]="$CAVA_3"
+theme[temp_end]="$CAVA_5"
+theme[cpu_start]="$CAVA_1"
+theme[cpu_mid]="$CAVA_3"
+theme[cpu_end]="$CAVA_4"
+theme[free_start]="$CAVA_2"
+theme[free_mid]="$CAVA_1"
+theme[free_end]="$CAVA_3"
+theme[cached_start]="$CAVA_1"
+theme[cached_mid]="$CAVA_2"
+theme[cached_end]="$CAVA_3"
+theme[available_start]="$CAVA_4"
+theme[available_mid]="$CAVA_2"
+theme[available_end]="$CAVA_1"
+theme[used_start]="$CAVA_1"
+theme[used_mid]="$CAVA_3"
+theme[used_end]="$CAVA_4"
+theme[download_start]="$CAVA_1"
+theme[download_mid]="$CAVA_2"
+theme[download_end]="$CAVA_4"
+theme[upload_start]="$CAVA_4"
+theme[upload_mid]="$CAVA_3"
+theme[upload_end]="$CAVA_1"
+theme[process_start]="$CAVA_1"
+theme[process_mid]="$CAVA_3"
+theme[process_end]="$CAVA_4"
+EOF
+mv "$BTOP_DIR/themes/$TARGET_ID.theme.tmp" "$BTOP_DIR/themes/$TARGET_ID.theme"
+cp -f "$BTOP_DIR/themes/$TARGET_ID.theme" "$BTOP_DIR/themes/theme-current.theme"
+if [ -f "$BTOP_DIR/btop.conf" ]; then
+  sed -i 's/^color_theme = .*/color_theme = "'"$TARGET_ID"'"/' "$BTOP_DIR/btop.conf"
+fi
+pkill -SIGUSR2 btop >/dev/null 2>&1 || true
+
+# 8. Zen Browser (live SSE + userChrome + custom newtab) & Vesktop/VSCode/Firefox
+if command -v theme-inject-zen >/dev/null 2>&1; then
+  theme-inject-zen "$TARGET_ID" >/dev/null 2>&1 || true
+  pkill -USR1 -f "theme-zen-bridge" >/dev/null 2>&1 || true
+fi
+if command -v theme-inject-apps >/dev/null 2>&1; then
+  theme-inject-apps "$TARGET_ID" >/dev/null 2>&1 || true
+fi
+
+# 9. Состояние и уведомление
+echo "$TARGET_ID" > "$STATE_DIR/current"
+command -v notify-send >/dev/null 2>&1 && notify-send -a "Theme Manager" -i preferences-desktop-theme "Тема применена" "$ICON $NAME" >/dev/null 2>&1 || true

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Выделение области экрана -> Tesseract OCR (eng+rus) -> буфер обмена.
+set -euo pipefail
+
+app="OCR"
+lang="${OCR_LANG:-eng+rus}"
+need() { command -v "$1" >/dev/null 2>&1 || { notify-send -u normal "$app" "Не найдена утилита: $1"; exit 1; }; }
+
+input_file=""
+if [[ ${1:-} == "--file" ]]; then
+  [[ -n ${2:-} ]] || { notify-send -u critical "$app" "Не указан путь к изображению"; exit 2; }
+  input_file="$2"; shift 2
+fi
+(( $# == 0 )) || { notify-send -u critical "$app" "Использование: ocr-grab [--file IMAGE]"; exit 2; }
+
+for c in tesseract wl-copy notify-send; do need "$c"; done
+
+tmp="$input_file"
+if [[ -z $tmp ]]; then
+  for c in grim slurp; do need "$c"; done
+  tmp="$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/ocr-grab.XXXXXX.png")"
+  trap 'rm -f "$tmp"' EXIT
+  geometry="$(slurp 2>/dev/null)" || exit 130
+  [[ -n $geometry ]] || exit 0
+  grim -g "$geometry" "$tmp"
+else
+  [[ -r $tmp ]] || { notify-send -u critical "$app" "Нет доступа к файлу: $tmp"; exit 1; }
+fi
+
+text="$(tesseract "$tmp" - -l "$lang" 2>/dev/null || tesseract "$tmp" - 2>/dev/null || true)"
+if [[ -z ${text//[[:space:]]/} ]]; then
+  notify-send -u normal "$app" "Текст не распознан"
+  exit 0
+fi
+
+printf '%s' "$text" | wl-copy
+notify-send -u low "$app" "Распознанный текст скопирован"

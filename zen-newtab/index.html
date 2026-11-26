@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Tab</title>
+  <style id="theme-vars">
+    /* __THEME_VARS__ */
+    :root {
+      --zen-theme-label: "Nullscapes (Cosmic Neon)";
+      --zen-bg: #080B16;
+      --zen-bg-translucent: rgba(8, 11, 22, 0.82);
+      --zen-surface: #141B29;
+      --zen-surface-hover: rgba(40, 54, 83, 0.65);
+      --zen-fg: #E8EDFF;
+      --zen-fg-muted: #93A1C6;
+      --zen-primary: #678FE4;
+      --zen-accent: #AB66CC;
+      --zen-border: rgba(103, 143, 228, 0.28);
+      --zen-shadow: rgba(0, 0, 0, 0.62);
+    }
+  </style>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background-color: var(--zen-bg);
+      color: var(--zen-fg);
+      font-family: "Noto Sans", "Inter", system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    @keyframes floatOrb1 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(60px, 40px) scale(1.08); }
+      100% { transform: translate(-20px, 70px) scale(0.96); }
+    }
+
+    @keyframes floatOrb2 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-70px, -45px) scale(1.1); }
+      100% { transform: translate(30px, -60px) scale(0.95); }
+    }
+
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(115px);
+      opacity: 0.34;
+      pointer-events: none;
+      z-index: 0;
+      will-change: transform;
+    }
+
+    .orb-1 {
+      width: 560px;
+      height: 560px;
+      top: -170px;
+      left: -130px;
+      background: radial-gradient(circle, var(--zen-primary) 0%, transparent 70%);
+      animation: floatOrb1 22s ease-in-out infinite alternate;
+    }
+
+    .orb-2 {
+      width: 600px;
+      height: 600px;
+      bottom: -210px;
+      right: -130px;
+      background: radial-gradient(circle, var(--zen-accent) 0%, transparent 70%);
+      animation: floatOrb2 26s ease-in-out infinite alternate;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, var(--zen-border) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--zen-border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.15;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 920px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 68px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 18px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .top-bar > * {
+      pointer-events: auto;
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .glass-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--zen-bg-translucent);
+      backdrop-filter: blur(18px) saturate(140%);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 6px 18px var(--zen-shadow);
+      font-size: 12px;
+      color: var(--zen-fg-muted);
+    }
+
+    .glass-pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--zen-primary), var(--zen-accent));
+      box-shadow: 0 0 10px var(--zen-primary);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ghost-btn {
+      background: var(--zen-bg-translucent);
+      backdrop-filter: blur(18px) saturate(140%);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      color: var(--zen-fg-muted);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .ghost-btn:hover,
+    .ghost-btn.active {
+      color: var(--zen-fg);
+      border-color: var(--zen-primary);
+      background: var(--zen-surface-hover);
+    }
+
+    .hero {
+      text-align: center;
+    }
+
+    .clock-wrap {
+      font-size: clamp(54px, 8vw, 84px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--zen-fg) 35%, var(--zen-primary) 75%, var(--zen-accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 6px 24px var(--zen-shadow));
+    }
+
+    .clock-sec {
+      font-size: 0.42em;
+      opacity: 0.72;
+      font-weight: 500;
+    }
+
+    .date-greeting {
+      margin-top: 10px;
+      font-size: 15px;
+      color: var(--zen-fg-muted);
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .search-section {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 16px;
+      background: var(--zen-bg-translucent);
+      backdrop-filter: blur(22px) saturate(145%);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.11), 0 14px 36px var(--zen-shadow);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--zen-primary);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 0 0 2px color-mix(in srgb, var(--zen-primary) 28%, transparent),
+        0 14px 36px var(--zen-shadow);
+    }
+
+    .search-badge {
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--zen-primary), var(--zen-accent));
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--zen-primary) 35%, transparent);
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--zen-fg);
+      font-size: 15px;
+      padding: 8px 4px;
+    }
+
+    .search-box input::placeholder {
+      color: var(--zen-fg-muted);
+      opacity: 0.75;
+    }
+
+    .search-submit {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--zen-border);
+      background: var(--zen-surface);
+      color: var(--zen-fg);
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.15s ease;
+    }
+
+    .search-submit:hover {
+      border-color: var(--zen-primary);
+      background: var(--zen-surface-hover);
+    }
+
+    .engine-chips {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: var(--zen-bg-translucent);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      color: var(--zen-fg-muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      color: var(--zen-fg);
+      border-color: var(--zen-primary);
+    }
+
+    .chip.active {
+      background: color-mix(in srgb, var(--zen-primary) 24%, var(--zen-surface));
+      color: var(--zen-fg);
+      border-color: var(--zen-primary);
+    }
+
+    .links-section {
+      width: 100%;
+      max-width: 780px;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 12px;
+    }
+
+    .link-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 15px;
+      border-radius: 14px;
+      background: var(--zen-bg-translucent);
+      backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid var(--zen-border);
+      color: var(--zen-fg);
+      text-decoration: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 8px 24px var(--zen-shadow);
+      transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .link-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--zen-primary);
+      background: var(--zen-surface-hover);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        0 12px 28px var(--zen-shadow),
+        0 0 16px color-mix(in srgb, var(--zen-primary) 22%, transparent);
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--zen-surface);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .card-meta {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-host {
+      font-size: 11px;
+      color: var(--zen-fg-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-delete {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: none;
+      background: rgba(243, 139, 168, 0.18);
+      color: #f38ba8;
+      font-size: 12px;
+      cursor: pointer;
+      display: none;
+      place-items: center;
+    }
+
+    body.editing .card-delete {
+      display: grid;
+    }
+
+    /* Scratchpad */
+    .notes-section {
+      width: 100%;
+      max-width: 780px;
+    }
+
+    .notes-card {
+      border-radius: 14px;
+      background: var(--zen-bg-translucent);
+      backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 8px 24px var(--zen-shadow);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      color: var(--zen-fg-muted);
+    }
+
+    .notes-input {
+      width: 100%;
+      min-height: 54px;
+      max-height: 160px;
+      resize: vertical;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--zen-fg);
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.45;
+      user-select: text;
+    }
+
+    .notes-input::placeholder {
+      color: var(--zen-fg-muted);
+      opacity: 0.65;
+    }
+
+    dialog.modal {
+      margin: auto;
+      border: none;
+      background: transparent;
+      color: var(--zen-fg);
+    }
+
+    dialog.modal::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+    }
+
+    .modal-card {
+      width: min(92vw, 380px);
+      padding: 20px;
+      border-radius: 16px;
+      background: var(--zen-surface);
+      border: 1px solid var(--zen-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 48px var(--zen-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-card label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--zen-fg-muted);
+    }
+
+    .modal-card input {
+      padding: 9px 11px;
+      border-radius: 10px;
+      border: 1px solid var(--zen-border);
+      background: var(--zen-bg);
+      color: var(--zen-fg);
+      outline: none;
+    }
+
+    .modal-card input:focus {
+      border-color: var(--zen-primary);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--zen-primary), var(--zen-accent));
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      padding: 7px 14px;
+      font-weight: 600;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    .emoji-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .emoji-opt {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--zen-border);
+      background: var(--zen-bg);
+      font-size: 16px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: border-color 0.14s ease, transform 0.14s ease;
+    }
+
+    .emoji-opt:hover {
+      border-color: var(--zen-primary);
+      transform: scale(1.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-grid"></div>
+
+  <main class="container">
+    <header class="top-bar">
+      <div class="top-left">
+        <div class="glass-pill" id="theme-pill" title="Активная тема из Theme Manager">
+          <span class="dot"></span>
+          <span id="theme-name">Nullscapes</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="ghost-btn" id="notes-toggle" title="Показать/скрыть заметки">Заметки</button>
+        <button class="ghost-btn" id="edit-toggle" title="Редактировать карточки">Изменить</button>
+        <button class="ghost-btn" id="add-card-btn" title="Добавить ссылку">+ Ссылка</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="clock-wrap">
+        <span id="clock-hm">00:00</span><span id="clock-sec" class="clock-sec">:00</span>
+      </div>
+      <div class="date-greeting">
+        <span id="greeting">Привет</span>
+        <span class="sep">·</span>
+        <span id="date-str">...</span>
+      </div>
+    </section>
+
+    <section class="search-section">
+      <form id="search-form" class="search-box" autocomplete="off">
+        <span class="search-badge" id="active-engine-badge">G</span>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Поиск или URL... (префиксы: @np, @no, @gh, @yt, @aw)"
+          autofocus
+        />
+        <button type="submit" class="search-submit" aria-label="Искать">↵</button>
+      </form>
+      <div class="engine-chips" id="engine-chips"></div>
+    </section>
+
+    <section class="links-section">
+      <div class="links-grid" id="links-grid"></div>
+    </section>
+
+    <section class="notes-section" id="notes-section" hidden>
+      <div class="notes-card">
+        <div class="notes-header">
+          <span>Быстрые заметки (автосохранение)</span>
+          <span id="notes-status"></span>
+        </div>
+        <textarea id="notes-input" class="notes-input" placeholder="Сюда можно кинуть команду, ссылку или мысль..."></textarea>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="add-dialog" class="modal">
+    <form method="dialog" id="add-form" class="modal-card">
+      <h3>Новая быстрая ссылка</h3>
+      <label>
+        <span>Название</span>
+        <input id="card-title" type="text" required placeholder="Например: NixOS Wiki" />
+      </label>
+      <label>
+        <span>URL</span>
+        <input id="card-url" type="text" required placeholder="https://wiki.nixos.org" />
+      </label>
+      <label>
+        <span>Иконка / Эмодзи</span>
+        <input id="card-icon" type="text" maxlength="4" placeholder="🔗" />
+        <div class="emoji-picker" id="emoji-picker">
+          <button type="button" class="emoji-opt">🔗</button>
+          <button type="button" class="emoji-opt">🌐</button>
+          <button type="button" class="emoji-opt">⚡</button>
+          <button type="button" class="emoji-opt">🤖</button>
+          <button type="button" class="emoji-opt">🛠️</button>
+          <button type="button" class="emoji-opt">📺</button>
+          <button type="button" class="emoji-opt">🎵</button>
+          <button type="button" class="emoji-opt">📁</button>
+          <button type="button" class="emoji-opt">🎮</button>
+          <button type="button" class="emoji-opt">📚</button>
+          <button type="button" class="emoji-opt">💬</button>
+          <button type="button" class="emoji-opt">🔥</button>
+        </div>
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="cancel-dialog" class="ghost-btn">Отмена</button>
+        <button type="submit" class="primary-btn">Добавить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const ENGINES = [
+      { id: "google", label: "Google", badge: "G", prefix: "@g", url: "https://www.google.com/search?q=" },
+      { id: "ddg", label: "DuckDuckGo", badge: "D", prefix: "@ddg", url: "https://duckduckgo.com/?q=" },
+      { id: "np", label: "NixOS Pkg", badge: "NP", prefix: "@np", url: "https://search.nixos.org/packages?query=" },
+      { id: "no", label: "NixOS Opt", badge: "NO", prefix: "@no", url: "https://search.nixos.org/options?query=" },
+      { id: "nw", label: "Nix Wiki", badge: "NW", prefix: "@nw", url: "https://wiki.nixos.org/w/index.php?search=" },
+      { id: "gh", label: "GitHub", badge: "GH", prefix: "@gh", url: "https://github.com/search?q=" },
+      { id: "yt", label: "YouTube", badge: "YT", prefix: "@yt", url: "https://www.youtube.com/results?search_query=" },
+      { id: "aw", label: "ArchWiki", badge: "AW", prefix: "@aw", url: "https://wiki.archlinux.org/index.php?search=" },
+    ];
+
+    const DEFAULT_CARDS = [
+      { title: "GitHub", url: "https://github.com", icon: "🐙" },
+      { title: "YouTube", url: "https://www.youtube.com", icon: "▶️" },
+      { title: "NixOS Packages", url: "https://search.nixos.org/packages", icon: "❄️" },
+      { title: "NixOS Options", url: "https://search.nixos.org/options", icon: "⚙️" },
+      { title: "Gemini", url: "https://gemini.google.com", icon: "✨" },
+      { title: "Proton Mail", url: "https://mail.proton.me", icon: "✉️" },
+      { title: "NixOS Wiki", url: "https://wiki.nixos.org", icon: "📘" },
+      { title: "Reddit", url: "https://www.reddit.com", icon: "👾" },
+    ];
+
+    const CARDS_KEY = "zen_custom_newtab_cards_v1";
+    const ENGINE_KEY = "zen_custom_newtab_engine_v1";
+    const NOTES_KEY = "zen_custom_newtab_notes_v1";
+    const NOTES_OPEN_KEY = "zen_custom_newtab_notes_open_v1";
+
+    let activeEngine = localStorage.getItem(ENGINE_KEY) || "google";
+
+    function syncThemeLabel() {
+      const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue("--zen-theme-label")
+        .trim()
+        .replace(/^["']|["']$/g, "");
+      if (raw) {
+        document.getElementById("theme-name").textContent = raw;
+      }
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+      document.getElementById("clock-hm").textContent = `${hh}:${mm}`;
+      document.getElementById("clock-sec").textContent = `:${ss}`;
+
+      const hour = now.getHours();
+      let greeting = "Добрый вечер";
+      if (hour < 6) greeting = "Доброй ночи";
+      else if (hour < 12) greeting = "Доброе утро";
+      else if (hour < 18) greeting = "Добрый день";
+
+      document.getElementById("greeting").textContent = greeting;
+      document.getElementById("date-str").textContent = now.toLocaleDateString("ru-RU", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      });
+    }
+
+    function renderChips() {
+      const wrap = document.getElementById("engine-chips");
+      wrap.innerHTML = "";
+      const current = ENGINES.find((e) => e.id === activeEngine) || ENGINES[0];
+      document.getElementById("active-engine-badge").textContent = current.badge;
+
+      for (const engine of ENGINES) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `chip${engine.id === current.id ? " active" : ""}`;
+        btn.textContent = `${engine.label} (${engine.prefix})`;
+        btn.addEventListener("click", () => {
+          activeEngine = engine.id;
+          localStorage.setItem(ENGINE_KEY, activeEngine);
+          renderChips();
+          document.getElementById("search-input").focus();
+        });
+        wrap.appendChild(btn);
+      }
+    }
+
+    function loadCards() {
+      try {
+        const raw = localStorage.getItem(CARDS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+      return DEFAULT_CARDS;
+    }
+
+    function saveCards(cards) {
+      localStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+    }
+
+    function renderCards() {
+      const grid = document.getElementById("links-grid");
+      const cards = loadCards();
+      grid.innerHTML = "";
+
+      cards.forEach((card, idx) => {
+        const a = document.createElement("a");
+        a.className = "link-card";
+        a.href = card.url;
+
+        const icon = document.createElement("div");
+        icon.className = "card-icon";
+        icon.textContent = card.icon || "🔗";
+
+        const meta = document.createElement("div");
+        meta.className = "card-meta";
+
+        const title = document.createElement("div");
+        title.className = "card-title";
+        title.textContent = card.title;
+
+        const host = document.createElement("div");
+        host.className = "card-host";
+        try {
+          host.textContent = new URL(card.url).hostname.replace(/^www\./, "");
+        } catch {
+          host.textContent = card.url;
+        }
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "card-delete";
+        del.textContent = "✕";
+        del.title = "Удалить";
+        del.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const next = loadCards().filter((_, i) => i !== idx);
+          saveCards(next);
+          renderCards();
+        });
+
+        meta.append(title, host);
+        a.append(icon, meta, del);
+        grid.appendChild(a);
+      });
+    }
+
+    function looksLikeUrl(q) {
+      if (/^https?:\/\//i.test(q)) return q;
+      if (/^localhost(:\d+)?(\/.*)?$/i.test(q)) return `http://${q}`;
+      if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/.*)?$/i.test(q) && !q.includes(" ")) return `https://${q}`;
+      return null;
+    }
+
+    document.getElementById("search-form").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const raw = document.getElementById("search-input").value.trim();
+      if (!raw) return;
+
+      for (const engine of ENGINES) {
+        if (raw.startsWith(engine.prefix + " ")) {
+          const term = raw.slice(engine.prefix.length).trim();
+          if (term) {
+            window.location.href = engine.url + encodeURIComponent(term);
+            return;
+          }
+        }
+      }
+
+      const direct = looksLikeUrl(raw);
+      if (direct) {
+        window.location.href = direct;
+        return;
+      }
+
+      const current = ENGINES.find((e) => e.id === activeEngine) || ENGINES[0];
+      window.location.href = current.url + encodeURIComponent(raw);
+    });
+
+    // Notes scratchpad
+    const notesSection = document.getElementById("notes-section");
+    const notesToggle = document.getElementById("notes-toggle");
+    const notesInput = document.getElementById("notes-input");
+    const notesStatus = document.getElementById("notes-status");
+
+    function setNotesOpen(open) {
+      notesSection.hidden = !open;
+      notesToggle.classList.toggle("active", open);
+      localStorage.setItem(NOTES_OPEN_KEY, open ? "1" : "0");
+    }
+
+    notesInput.value = localStorage.getItem(NOTES_KEY) || "";
+    setNotesOpen(localStorage.getItem(NOTES_OPEN_KEY) === "1");
+
+    notesToggle.addEventListener("click", () => {
+      const next = notesSection.hidden;
+      setNotesOpen(next);
+      if (next) notesInput.focus();
+    });
+
+    notesInput.addEventListener("input", () => {
+      localStorage.setItem(NOTES_KEY, notesInput.value);
+      notesStatus.textContent = "Сохранено";
+      setTimeout(() => {
+        notesStatus.textContent = "";
+      }, 900);
+    });
+
+    // Cards edit & add modal
+    const editToggle = document.getElementById("edit-toggle");
+    editToggle.addEventListener("click", () => {
+      const active = document.body.classList.toggle("editing");
+      editToggle.classList.toggle("active", active);
+      editToggle.textContent = active ? "Готово" : "Изменить";
+    });
+
+    const dialog = document.getElementById("add-dialog");
+    document.getElementById("add-card-btn").addEventListener("click", () => dialog.showModal());
+    document.getElementById("cancel-dialog").addEventListener("click", () => dialog.close());
+    document.getElementById("emoji-picker").addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".emoji-opt");
+      if (btn) {
+        document.getElementById("card-icon").value = btn.textContent.trim();
+      }
+    });
+    document.getElementById("add-form").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const title = document.getElementById("card-title").value.trim();
+      let url = document.getElementById("card-url").value.trim();
+      const icon = document.getElementById("card-icon").value.trim() || "🔗";
+      if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+
+      const cards = loadCards();
+      cards.push({ title, url, icon });
+      saveCards(cards);
+      renderCards();
+      ev.target.reset();
+      dialog.close();
+    });
+
+    syncThemeLabel();
+    updateClock();
+    setInterval(updateClock, 1000);
+    renderChips();
+    renderCards();
+  </script>
+</body>
+</html>

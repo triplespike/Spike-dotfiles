@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Пипетка цвета под курсором (hyprpicker) -> hex в буфер обмена.
+set -euo pipefail
+
+app="Пипетка"
+need() { command -v "$1" >/dev/null 2>&1 || { notify-send -u normal "$app" "Не найдена утилита: $1"; exit 1; }; }
+
+repeat=false
+case "${1:-}" in
+  "") ;;
+  --repeat) repeat=true ;;
+  *) notify-send -u critical "$app" "Использование: color-pick [--repeat]"; exit 2 ;;
+esac
+
+for c in hyprpicker wl-copy notify-send; do need "$c"; done
+
+while true; do
+  if ! color="$(hyprpicker -f hex)"; then
+    [[ $repeat == true ]] && exit 0
+    exit 130
+  fi
+  if [[ -n $color ]]; then
+    printf '%s' "$color" | wl-copy
+    printf '%s\n' "$color"
+    notify-send -u low "$app" "Скопирован цвет: $color"
+  fi
+  [[ $repeat == true ]] || break
+done

@@ -1,0 +1,12 @@
+[Unit]
+Description=Auto-pause live wallpapers when fullscreen window or game is active on Niri
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/wallpaper-autopause
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

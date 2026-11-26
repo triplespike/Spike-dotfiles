@@ -14,6 +14,7 @@
           skip-at-startup
       }
 
+
       screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
       // Мягкий, умеренный блюр (меньше радиус и число проходов)
@@ -225,24 +226,6 @@
           draw-border-with-background false
       }
 
-      // Мягкое приглушение неактивных окон с исключением видео, игр и медиаплееров
-      window-rule {
-          match is-active=false
-          exclude app-id=r#"(?i).*(mpv|vlc|steam_app_|geometrydash|gamescope|spotify).*"#
-          opacity 0.92
-      }
-
-      // Выпадающий Quake-терминал по F12 (Scratchpad)
-      window-rule {
-          match app-id="ghostty-scratch"
-          open-floating true
-          default-column-width { fixed 1180; }
-          default-window-height { fixed 620; }
-          default-floating-position x=0 y=32 relative-to="top"
-          geometry-corner-radius 14
-          clip-to-geometry true
-      }
-
       // Geometry Dash и игры Steam: Direct Scanout, нулевой инпут-лаг, без скруглений и теней
       window-rule {
           match app-id=r#"(?i).*(steam_app_|geometrydash).*"#
@@ -349,15 +332,6 @@
       window-rule {
           match title="(?i).*(выбор файла|open file|save file|сохранить файл|подтверждение|dialog).*"
           open-floating true
-      }
-
-      // Прямой аппаратный скан-аут (Direct Scanout) для игр (минимальный инпут-лаг, байпас композиции)
-      window-rule {
-          match app-id=r#"^(steam_app_.*|gamescope|wine|lutris|heroic|bottles|prismlauncher|osu|rpcs3)$"#
-          geometry-corner-radius 0
-          clip-to-geometry false
-          shadow { off; }
-          focus-ring { off; }
       }
 
       // ==========================================================
@@ -511,27 +485,24 @@
           // ------------------------------------------------------
           //                      Скриншоты
           // ------------------------------------------------------
-          Print       { spawn "noctalia" "msg" "screenshot-region"; }
-          Mod+Shift+S { spawn "noctalia" "msg" "screenshot-region"; }
+          Print       { spawn "lumine-capture"; }
+          Mod+Shift+S { spawn "lumine-capture"; }
           Ctrl+Print  { screenshot-screen; }
           Alt+Print   { screenshot-window; }
+
+          // ------------------------------------------------------
+          //                 Экранные и медиа-утилиты
+          // ------------------------------------------------------
+          Mod+Shift+O { spawn "ocr-grab"; }
+          Mod+Shift+R { spawn "qr-scan"; }
+          Mod+Ctrl+C  { spawn "color-pick"; }
+          Mod+Shift+M { spawn "songrec-grab"; }
 
           // ------------------------------------------------------
           //                  OBS Studio Recording
           // ------------------------------------------------------
           F9 { spawn "obs-control" "toggle-record"; }
           F8 { spawn "obs-control" "toggle-pause"; }
-
-          // ------------------------------------------------------
-          //      GPU Screen Recorder (ShadowPlay повтор в RAM)
-          // ------------------------------------------------------
-          Mod+F10       { spawn "pkill" "-SIGUSR1" "gpu-screen-recorder"; }
-          Mod+Shift+F10 { spawn "gsr-toggle-replay"; }
-
-          // ------------------------------------------------------
-          //      Quake-Style Dropdown Terminal (Scratchpad)
-          // ------------------------------------------------------
-          F12 { spawn "scratchpad-toggle"; }
       }
 
       // Динамическая тема оформления (управляется theme-manager)

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Реактивная лавалампа с синхронизацией цветов Theme Manager
+set -uo pipefail
+command -v lavat >/dev/null 2>&1 || { echo "lavat не установлен (AUR: lavat-git)" >&2; exit 1; }
+
+CONF="$HOME/.local/state/theme-manager/lavat.conf"
+CHILD=""
+WATCHER_PID=""
+RELOAD=0
+
+cleanup() {
+  [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null || true
+  [ -n "$CHILD" ] && kill "$CHILD" 2>/dev/null || true
+  exit 0
+}
+reload_lava() {
+  RELOAD=1
+  [ -n "$CHILD" ] && kill "$CHILD" 2>/dev/null || true
+}
+trap cleanup INT TERM EXIT
+trap reload_lava USR1
+
+(
+  LAST_M=""
+  [ -f "$CONF" ] && LAST_M="$(stat -c %Y "$CONF" 2>/dev/null || true)"
+  while sleep 0.5; do
+    M="$(stat -c %Y "$CONF" 2>/dev/null || true)"
+    if [ "$M" != "$LAST_M" ]; then
+      LAST_M="$M"
+      kill -USR1 $$ 2>/dev/null || exit 0
+    fi
+  done
+) &
+WATCHER_PID=$!
+
+while true; do
+  COLOR="678FE4"
+  RIM="AB66CC"
+  [ -f "$CONF" ] && source "$CONF"
+  RELOAD=0
+
+  HAS_CUSTOM=0
+  for arg in "$@"; do
+    [ "$arg" = "-c" ] || [ "$arg" = "-k" ] && HAS_CUSTOM=1 && break
+  done
+
+  if [ "$HAS_CUSTOM" -eq 1 ]; then
+    lavat "$@" &
+  else
+    lavat -g -c "$COLOR" -k "$RIM" -C -G "$@" &
+  fi
+  CHILD=$!
+  wait "$CHILD" 2>/dev/null || true
+  CHILD=""
+  [ "$RELOAD" -eq 1 ] || break
+done

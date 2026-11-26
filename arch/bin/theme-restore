@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+
+STATE_FILE="$HOME/.local/state/theme-manager/current"
+TARGET_ID="nullscapes"
+[ -f "$STATE_FILE" ] && TARGET_ID="$(tr -d ' \n\r' < "$STATE_FILE")"
+[ -n "$TARGET_ID" ] || TARGET_ID="nullscapes"
+
+exec theme-apply "$TARGET_ID"

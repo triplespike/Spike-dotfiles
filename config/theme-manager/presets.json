@@ -459,7 +459,7 @@
       "icon": "⚔️",
       "wallpaper": {
         "type": "video",
-        "path": "~/Spike-dotfiles/assets/wallpapers/medieval.mp4",
+        "path": "~/Spike-dotfiles/assets/wallpapers/medieval-loop.mp4",
         "screen": "HDMI-A-1",
         "fallback_image": "~/Spike-dotfiles/assets/wallpapers/medieval.png"
       },

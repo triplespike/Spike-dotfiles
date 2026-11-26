@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Выделение области экрана с QR-кодом -> zbarimg -> буфер обмена (+ xdg-open для URL).
+set -euo pipefail
+
+app="QR-сканер"
+need() { command -v "$1" >/dev/null 2>&1 || { notify-send -u normal "$app" "Не найдена утилита: $1"; exit 1; }; }
+
+input_file=""
+if [[ ${1:-} == "--file" ]]; then
+  [[ -n ${2:-} ]] || { notify-send -u critical "$app" "Не указан путь к изображению"; exit 2; }
+  input_file="$2"; shift 2
+fi
+(( $# == 0 )) || { notify-send -u critical "$app" "Использование: qr-scan [--file IMAGE]"; exit 2; }
+
+for c in zbarimg wl-copy notify-send xdg-open; do need "$c"; done
+
+tmp="$input_file"
+if [[ -z $tmp ]]; then
+  for c in grim slurp; do need "$c"; done
+  tmp="$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/qr-scan.XXXXXX.png")"
+  trap 'rm -f "$tmp"' EXIT
+  geometry="$(slurp 2>/dev/null)" || exit 130
+  [[ -n $geometry ]] || exit 0
+  grim -g "$geometry" "$tmp"
+else
+  [[ -r $tmp ]] || { notify-send -u critical "$app" "Нет доступа к файлу: $tmp"; exit 1; }
+fi
+
+result="$(zbarimg --raw "$tmp" 2>/dev/null | head -n 1 || true)"
+if [[ -z $result ]]; then
+  notify-send -u normal "$app" "QR-код не найден"
+  exit 0
+fi
+
+printf '%s' "$result" | wl-copy
+case "$result" in
+  http://*|https://*)
+    xdg-open "$result" >/dev/null 2>&1 || true
+    notify-send -u low "$app" "Открыто и скопировано: $result"
+    ;;
+  *)
+    notify-send -u low "$app" "Содержимое QR скопировано"
+    ;;
+esac

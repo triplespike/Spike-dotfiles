@@ -1,0 +1,457 @@
+// ryogami-live (PoC): a sub-100MB live video wallpaper.
+//
+// It decodes a clip with libav (hardware VA-API/NVDEC when available, software
+// otherwise) and paints frames into wl_shm buffers on a wlr-layer-shell
+// BACKGROUND surface, letting wp_viewport upscale a small (capped) render
+// buffer to the whole output. It never creates an EGL/GL context: on the
+// software path no GPU driver maps in at all, and the hardware path maps only
+// the decode driver, not the Mesa/NVIDIA GL+CUDA render stack, so RSS stays in
+// the swww/awww class. Decoded frames land in ordinary shared memory, kept tiny
+// by scaling to <=CAP_W width; the compositor upscales.
+//
+// Usage: livewall <video-file> [cap_width] [fit] [output_name]
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <time.h>
+#include <poll.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <wayland-client.h>
+#include "wlr-layer-shell-client-protocol.h"
+#include "viewporter-client-protocol.h"
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
+#include <libavutil/hwcontext.h>
+#include <libavutil/pixdesc.h>
+
+#define NBUF 3
+
+static struct wl_display *dpy;
+static struct wl_compositor *comp;
+static struct wl_shm *shm;
+static struct zwlr_layer_shell_v1 *layer_shell;
+static struct wp_viewporter *viewporter;
+
+static struct wl_surface *surface;
+static struct zwlr_layer_surface_v1 *layer_surface;
+static struct wp_viewport *viewport;
+
+static int screen_w = 0, screen_h = 0; // logical output size (from configure)
+static int configured = 0;
+static int running = 1;
+
+struct buffer {
+	struct wl_buffer *wl_buf;
+	void *data;
+	size_t size;
+	int busy;
+};
+static struct buffer bufs[NBUF];
+static int render_w, render_h, stride;
+
+// ---- hardware decode ----
+// hw_pix is the pixel format the chosen hw decoder returns (a GPU surface);
+// get_hw_format asks libav to use it when the codec offers it, and picks a
+// software format otherwise so decode still succeeds without acceleration.
+static enum AVPixelFormat hw_pix = AV_PIX_FMT_NONE;
+static enum AVPixelFormat get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *fmts) {
+	(void)ctx;
+	for (const enum AVPixelFormat *p = fmts; *p != AV_PIX_FMT_NONE; p++)
+		if (*p == hw_pix) return *p;
+	for (const enum AVPixelFormat *p = fmts; *p != AV_PIX_FMT_NONE; p++) {
+		const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(*p);
+		if (d && !(d->flags & AV_PIX_FMT_FLAG_HWACCEL)) return *p;
+	}
+	return fmts[0];
+}
+
+// ---- outputs (per-monitor binding) ----
+// Track every wl_output and its connector name (wl_output v4 `name` event) so a
+// per-output wallpaper can bind its surface to the requested monitor. An empty or
+// unmatched name keeps the NULL-output default (the compositor's primary).
+#define MAX_OUTPUTS 16
+struct output { struct wl_output *wl; char name[64]; };
+static struct output outputs[MAX_OUTPUTS];
+static int n_outputs;
+
+static void out_geometry(void *d, struct wl_output *o, int32_t x, int32_t y,
+                         int32_t pw, int32_t ph, int32_t sp, const char *make,
+                         const char *model, int32_t tr) {
+	(void)d;(void)o;(void)x;(void)y;(void)pw;(void)ph;(void)sp;(void)make;(void)model;(void)tr;
+}
+static void out_mode(void *d, struct wl_output *o, uint32_t f, int32_t w, int32_t h, int32_t r) {
+	(void)d;(void)o;(void)f;(void)w;(void)h;(void)r;
+}
+static void out_done(void *d, struct wl_output *o) { (void)d;(void)o; }
+static void out_scale(void *d, struct wl_output *o, int32_t s) { (void)d;(void)o;(void)s; }
+static void out_name(void *d, struct wl_output *o, const char *name) {
+	(void)o;
+	struct output *e = d;
+	snprintf(e->name, sizeof e->name, "%s", name);
+}
+static void out_description(void *d, struct wl_output *o, const char *desc) { (void)d;(void)o;(void)desc; }
+static const struct wl_output_listener out_listener = {
+	out_geometry, out_mode, out_done, out_scale, out_name, out_description,
+};
+
+// ---- registry ----
+static void reg_global(void *d, struct wl_registry *r, uint32_t name,
+                       const char *iface, uint32_t ver) {
+	(void)d;
+	if (!strcmp(iface, wl_compositor_interface.name))
+		comp = wl_registry_bind(r, name, &wl_compositor_interface, 4);
+	else if (!strcmp(iface, wl_shm_interface.name))
+		shm = wl_registry_bind(r, name, &wl_shm_interface, 1);
+	else if (!strcmp(iface, zwlr_layer_shell_v1_interface.name))
+		layer_shell = wl_registry_bind(r, name, &zwlr_layer_shell_v1_interface, 1);
+	else if (!strcmp(iface, wp_viewporter_interface.name))
+		viewporter = wl_registry_bind(r, name, &wp_viewporter_interface, 1);
+	else if (!strcmp(iface, wl_output_interface.name) && n_outputs < MAX_OUTPUTS) {
+		uint32_t v = ver < 4 ? ver : 4; // v4 carries the `name` event
+		struct output *e = &outputs[n_outputs++];
+		e->name[0] = '\0';
+		e->wl = wl_registry_bind(r, name, &wl_output_interface, v);
+		wl_output_add_listener(e->wl, &out_listener, e);
+	}
+}
+static void reg_remove(void *d, struct wl_registry *r, uint32_t name) { (void)d;(void)r;(void)name; }
+static const struct wl_registry_listener reg_listener = { reg_global, reg_remove };
+
+// ---- layer surface ----
+static void ls_configure(void *d, struct zwlr_layer_surface_v1 *ls,
+                         uint32_t serial, uint32_t w, uint32_t h) {
+	(void)d;
+	zwlr_layer_surface_v1_ack_configure(ls, serial);
+	if (w) screen_w = w;
+	if (h) screen_h = h;
+	configured = 1;
+}
+static void ls_closed(void *d, struct zwlr_layer_surface_v1 *ls) { (void)d;(void)ls; running = 0; }
+static const struct zwlr_layer_surface_v1_listener ls_listener = { ls_configure, ls_closed };
+
+// ---- buffer release ----
+static void buf_release(void *d, struct wl_buffer *wl_buf) {
+	(void)wl_buf;
+	struct buffer *b = d;
+	b->busy = 0;
+}
+static const struct wl_buffer_listener buf_listener = { buf_release };
+
+// ---- frame callback (visibility-gated pacing) ----
+// Armed on every commit; the compositor fires it once it has shown the frame,
+// and never while the surface is occluded (behind a fullscreen window). The
+// render loop waits on it before drawing the next frame, so the decoder idles
+// while hidden and repaints immediately on reveal, instead of free-running
+// against an unseen surface and leaving a stale or black frame behind.
+static int frame_pending = 0;
+static void frame_done(void *d, struct wl_callback *cb, uint32_t t) {
+	(void)d; (void)t;
+	wl_callback_destroy(cb);
+	frame_pending = 0;
+}
+static const struct wl_callback_listener frame_listener = { frame_done };
+
+static int alloc_buffers(void) {
+	stride = render_w * 4;
+	size_t bsize = (size_t)stride * render_h;
+	size_t total = bsize * NBUF;
+	int fd = memfd_create("livewall", MFD_CLOEXEC);
+	if (fd < 0) { perror("memfd_create"); return -1; }
+	if (ftruncate(fd, total) < 0) { perror("ftruncate"); close(fd); return -1; }
+	void *base = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (base == MAP_FAILED) { perror("mmap"); close(fd); return -1; }
+	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, total);
+	for (int i = 0; i < NBUF; i++) {
+		bufs[i].wl_buf = wl_shm_pool_create_buffer(pool, i * bsize, render_w, render_h,
+		                                           stride, WL_SHM_FORMAT_XRGB8888);
+		bufs[i].data = (char *)base + i * bsize;
+		bufs[i].size = bsize;
+		bufs[i].busy = 0;
+		wl_buffer_add_listener(bufs[i].wl_buf, &buf_listener, &bufs[i]);
+	}
+	wl_shm_pool_destroy(pool);
+	close(fd);
+	return 0;
+}
+
+static struct buffer *free_buffer(void) {
+	for (int i = 0; i < NBUF; i++)
+		if (!bufs[i].busy) return &bufs[i];
+	return NULL;
+}
+
+static int64_t now_ns(void) {
+	struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+// pump the wayland fd until deadline so wl_buffer.release events arrive
+static void pump_until(int64_t deadline) {
+	int fd = wl_display_get_fd(dpy);
+	while (running) {
+		wl_display_flush(dpy);
+		int64_t left = deadline - now_ns();
+		if (left <= 0) break;
+		struct pollfd pfd = { fd, POLLIN, 0 };
+		int t = (int)(left / 1000000LL);
+		int r = poll(&pfd, 1, t > 0 ? t : 0);
+		if (r > 0 && (pfd.revents & POLLIN)) {
+			if (wl_display_dispatch(dpy) < 0) { running = 0; return; }
+		} else break;
+	}
+	// drain anything already queued
+	wl_display_dispatch_pending(dpy);
+}
+
+int main(int argc, char **argv) {
+	if (argc < 2) { fprintf(stderr, "usage: %s <video> [cap_width] [fit] [output_name]\n", argv[0]); return 2; }
+	const char *path = argv[1];
+	int cap_w = argc > 2 ? atoi(argv[2]) : 1280;
+	if (cap_w < 64) cap_w = 1280;
+	// fill (cover, default) crops the frame to the screen aspect; fit
+	// letterboxes it whole. ryoku-shell passes the ryowalls Fit knob as argv[3].
+	int fit = (argc > 3 && strcmp(argv[3], "fit") == 0);
+	// argv[4]: bind to this connector (per-output wallpaper). Empty/absent binds
+	// NULL (the compositor's primary), today's single-monitor behaviour.
+	const char *want = (argc > 4 && argv[4][0]) ? argv[4] : NULL;
+
+	dpy = wl_display_connect(NULL);
+	if (!dpy) { fprintf(stderr, "no wayland display\n"); return 1; }
+	struct wl_registry *reg = wl_display_get_registry(dpy);
+	wl_registry_add_listener(reg, &reg_listener, NULL);
+	wl_display_roundtrip(dpy);
+	if (!comp || !shm || !layer_shell || !viewporter) {
+		fprintf(stderr, "missing globals (compositor=%p shm=%p layer_shell=%p viewporter=%p)\n",
+		        (void*)comp,(void*)shm,(void*)layer_shell,(void*)viewporter);
+		return 1;
+	}
+
+	// Resolve the requested output. The wl_output `name` events arrive after the
+	// bind, so a second roundtrip collects them before matching.
+	struct wl_output *chosen = NULL;
+	if (want) {
+		wl_display_roundtrip(dpy);
+		for (int i = 0; i < n_outputs; i++)
+			if (!strcmp(outputs[i].name, want)) { chosen = outputs[i].wl; break; }
+		if (!chosen)
+			fprintf(stderr, "livewall: output %s not found; using primary\n", want);
+	}
+
+	surface = wl_compositor_create_surface(comp);
+	// chosen output (per-output wallpaper) or NULL (compositor's primary).
+	layer_surface = zwlr_layer_shell_v1_get_layer_surface(
+		layer_shell, surface, chosen, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, "ryogami-live");
+	zwlr_layer_surface_v1_add_listener(layer_surface, &ls_listener, NULL);
+	zwlr_layer_surface_v1_set_anchor(layer_surface,
+		ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP | ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |
+		ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT | ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT);
+	zwlr_layer_surface_v1_set_exclusive_zone(layer_surface, -1);
+	zwlr_layer_surface_v1_set_size(layer_surface, 0, 0);
+	wl_surface_commit(surface);
+	// wait for the configure that carries the output size
+	while (!configured && wl_display_dispatch(dpy) >= 0) {}
+	if (screen_w <= 0 || screen_h <= 0) { screen_w = 1920; screen_h = 1080; }
+
+	// ---- libav: open + find video stream + SW decoder ----
+	AVFormatContext *fmt = NULL;
+	if (avformat_open_input(&fmt, path, NULL, NULL) < 0) { fprintf(stderr, "open %s failed\n", path); return 1; }
+	avformat_find_stream_info(fmt, NULL);
+	const AVCodec *codec = NULL;
+	int vid = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, &codec, 0);
+	if (vid < 0) { fprintf(stderr, "no video stream\n"); return 1; }
+	AVCodecContext *dec = avcodec_alloc_context3(codec);
+	avcodec_parameters_to_context(dec, fmt->streams[vid]->codecpar);
+	dec->thread_count = 2; // cheap parallelism, bounded so RAM stays low
+
+	// Prefer hardware decode (VA-API on Intel/AMD, NVDEC/VDPAU on NVIDIA, DRM
+	// otherwise) so a 4K clip costs a few percent of a core instead of ~15%.
+	// Only the decode driver maps in, never an EGL/GL context; any failure
+	// leaves dec on the software path, preserving the tiny-RSS behaviour.
+	// Try real video decoders in order, never the experimental/heavy Vulkan
+	// path: VA-API (Intel/AMD, and NVIDIA via nvidia-vaapi-driver), then NVDEC
+	// (CUDA) and VDPAU for NVIDIA, then DRM. First one this codec and machine
+	// can create wins; if none do, decode stays software.
+	static const enum AVHWDeviceType hw_try[] = {
+		AV_HWDEVICE_TYPE_VAAPI, AV_HWDEVICE_TYPE_CUDA,
+		AV_HWDEVICE_TYPE_VDPAU, AV_HWDEVICE_TYPE_DRM,
+	};
+	AVBufferRef *hw_ctx = NULL;
+	for (size_t t = 0; t < sizeof(hw_try) / sizeof(*hw_try) && !hw_ctx; t++) {
+		enum AVPixelFormat pf = AV_PIX_FMT_NONE;
+		for (int i = 0; ; i++) {
+			const AVCodecHWConfig *cfg = avcodec_get_hw_config(codec, i);
+			if (!cfg) break;
+			if ((cfg->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) &&
+			    cfg->device_type == hw_try[t]) { pf = cfg->pix_fmt; break; }
+		}
+		if (pf == AV_PIX_FMT_NONE) continue; // this codec has no such accelerator
+		if (av_hwdevice_ctx_create(&hw_ctx, hw_try[t], NULL, NULL, 0) < 0) { hw_ctx = NULL; continue; }
+		hw_pix = pf;
+		dec->hw_device_ctx = av_buffer_ref(hw_ctx);
+		dec->get_format = get_hw_format;
+		fprintf(stderr, "livewall: hw decode via %s\n", av_hwdevice_get_type_name(hw_try[t]));
+	}
+	if (avcodec_open2(dec, codec, NULL) < 0) { fprintf(stderr, "codec open failed\n"); return 1; }
+
+	int src_w = dec->width, src_h = dec->height;
+	if (src_w < 2) src_w = 2;
+	if (src_h < 2) src_h = 2;
+
+	// Aspect-correct mapping. The buffer is decoded small (width capped at
+	// cap_w) and wp_viewport upscales it to the screen on the compositor GPU
+	// for free. fill keeps a video-aspect buffer and crops it to the screen
+	// via the viewport source rect (cover); fit decodes into a screen-aspect
+	// buffer with the frame centred, leaving the shm zero-fill as black bars.
+	int sws_w, sws_h, dst_ox = 0, dst_oy = 0;
+	int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0;
+	if (fit) {
+		render_w = src_w <= cap_w ? src_w : cap_w;
+		render_h = (int)((long)render_w * screen_h / screen_w);
+		render_w &= ~1; render_h &= ~1;
+		if (render_w < 2) render_w = 2;
+		if (render_h < 2) render_h = 2;
+		if ((long)src_w * render_h > (long)render_w * src_h) { // src wider than buffer
+			sws_w = render_w;
+			sws_h = (int)((long)render_w * src_h / src_w);
+		} else {
+			sws_h = render_h;
+			sws_w = (int)((long)render_h * src_w / src_h);
+		}
+		sws_w &= ~1; sws_h &= ~1;
+		if (sws_w < 2) sws_w = 2;
+		if (sws_h < 2) sws_h = 2;
+		if (sws_w > render_w) sws_w = render_w;
+		if (sws_h > render_h) sws_h = render_h;
+		dst_ox = ((render_w - sws_w) / 2) & ~1;
+		dst_oy = ((render_h - sws_h) / 2) & ~1;
+	} else {
+		render_w = src_w <= cap_w ? src_w : cap_w;
+		render_h = (int)((long)src_h * render_w / src_w);
+		render_w &= ~1; render_h &= ~1;
+		if (render_w < 2) render_w = 2;
+		if (render_h < 2) render_h = 2;
+		sws_w = render_w; sws_h = render_h;
+		crop_w = render_w; crop_h = render_h;
+		if ((long)render_w * screen_h > (long)render_h * screen_w) { // buffer wider than screen
+			crop_w = (int)((long)render_h * screen_w / screen_h);
+			crop_x = (render_w - crop_w) / 2;
+		} else {
+			crop_h = (int)((long)render_w * screen_h / screen_w);
+			crop_y = (render_h - crop_h) / 2;
+		}
+		if (crop_w < 1) crop_w = 1;
+		if (crop_h < 1) crop_h = 1;
+	}
+
+	if (alloc_buffers() < 0) return 1;
+	viewport = wp_viewporter_get_viewport(viewporter, surface);
+	if (!fit)
+		wp_viewport_set_source(viewport,
+			wl_fixed_from_int(crop_x), wl_fixed_from_int(crop_y),
+			wl_fixed_from_int(crop_w), wl_fixed_from_int(crop_h));
+	wp_viewport_set_destination(viewport, screen_w, screen_h);
+
+	AVRational afr = fmt->streams[vid]->avg_frame_rate;
+	double fps = (afr.num > 0 && afr.den > 0) ? av_q2d(afr) : 30.0;
+	if (fps < 1 || fps > 240) fps = 30.0;
+	int64_t frame_ns = (int64_t)(1e9 / fps);
+
+	// sws is built lazily from the first decoded frame's real pixel format:
+	// with hw decode dec->pix_fmt is a GPU surface format and the frame we
+	// actually scale is the software copy transferred off the GPU (NV12 etc).
+	struct SwsContext *sws = NULL;
+	enum AVPixelFormat sws_src_fmt = AV_PIX_FMT_NONE;
+	AVFrame *sw_frame = av_frame_alloc();
+
+	AVPacket *pkt = av_packet_alloc();
+	AVFrame *frame = av_frame_alloc();
+	fprintf(stderr, "livewall: %dx%d src -> %dx%d buffer (%s) -> %dx%d screen @ %.1ffps\n",
+	        src_w, src_h, render_w, render_h, fit ? "fit" : "fill", screen_w, screen_h, fps);
+
+	int64_t next = now_ns();
+	int announced = 0;
+	while (running) {
+		// Wait until the compositor is ready for a new frame. While the surface
+		// is occluded no callback arrives, so this idles (no decode, no CPU)
+		// until the wallpaper is visible again, then draws a fresh frame.
+		while (running && frame_pending) {
+			if (wl_display_dispatch(dpy) < 0) { running = 0; break; }
+		}
+		if (!running) break;
+
+		// pull one decoded frame (loop the file at EOF)
+		int got = 0;
+		while (!got && running) {
+			int rp = av_read_frame(fmt, pkt);
+			if (rp < 0) { // EOF: seek back to start, flush, keep looping
+				av_seek_frame(fmt, vid, 0, AVSEEK_FLAG_BACKWARD);
+				avcodec_flush_buffers(dec);
+				continue;
+			}
+			if (pkt->stream_index != vid) { av_packet_unref(pkt); continue; }
+			int rs = avcodec_send_packet(dec, pkt);
+			av_packet_unref(pkt);
+			if (rs < 0) continue;
+			int rr = avcodec_receive_frame(dec, frame);
+			if (rr == 0) got = 1;
+		}
+		if (!running) break;
+
+		struct buffer *b = free_buffer();
+		if (!b) { // all buffers in flight; give the compositor a moment
+			pump_until(now_ns() + frame_ns);
+			b = free_buffer();
+			if (!b) { av_frame_unref(frame); continue; }
+		}
+
+		// With hw decode the frame lives on the GPU; copy it back to system
+		// memory so swscale can read it. Software frames pass straight through.
+		AVFrame *src = frame;
+		if (hw_pix != AV_PIX_FMT_NONE && frame->format == hw_pix) {
+			if (av_hwframe_transfer_data(sw_frame, frame, 0) < 0) { av_frame_unref(frame); continue; }
+			src = sw_frame;
+		}
+		if (!sws || sws_src_fmt != (enum AVPixelFormat)src->format) {
+			if (sws) sws_freeContext(sws);
+			sws = sws_getContext(src_w, src_h, (enum AVPixelFormat)src->format,
+				sws_w, sws_h, AV_PIX_FMT_BGRA, SWS_BILINEAR, NULL, NULL, NULL);
+			sws_src_fmt = (enum AVPixelFormat)src->format;
+			if (!sws) { fprintf(stderr, "sws init failed\n"); av_frame_unref(frame); break; }
+		}
+		uint8_t *dst[4] = { b->data + (size_t)dst_oy * stride + (size_t)dst_ox * 4, NULL, NULL, NULL };
+		int dstride[4] = { stride, 0, 0, 0 };
+		sws_scale(sws, (const uint8_t *const *)src->data, src->linesize, 0, src_h, dst, dstride);
+		av_frame_unref(frame);
+		if (src == sw_frame) av_frame_unref(sw_frame);
+
+		b->busy = 1;
+		struct wl_callback *cb = wl_surface_frame(surface);
+		wl_callback_add_listener(cb, &frame_listener, NULL);
+		frame_pending = 1;
+		wl_surface_attach(surface, b->wl_buf, 0, 0);
+		wl_surface_damage_buffer(surface, 0, 0, render_w, render_h);
+		wl_surface_commit(surface);
+		if (!announced) {
+			// First real frame is on its way: tell ryoku-shell the wallpaper is
+			// live so the backdrop steps aside. Flush so the frame lands first.
+			announced = 1;
+			wl_display_flush(dpy);
+			printf("READY\n");
+			fflush(stdout);
+		}
+
+		next += frame_ns;
+		int64_t t = now_ns();
+		if (next < t) next = t; // don't accumulate lag
+		pump_until(next);
+	}
+	if (sws) sws_freeContext(sws);
+	av_frame_free(&sw_frame);
+	if (hw_ctx) av_buffer_unref(&hw_ctx);
+
+	return 0;
+}

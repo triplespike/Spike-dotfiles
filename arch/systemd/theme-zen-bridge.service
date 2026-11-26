@@ -1,0 +1,11 @@
+[Unit]
+Description=Theme Manager Zen Browser live SSE palette bridge
+After=default.target
+
+[Service]
+ExecStart=%h/.local/bin/theme-zen-bridge
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target default.target

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Меню выбора темы (Rofi по умолчанию, GTK4/Libadwaita по --gui)
+set -euo pipefail
+
+export PATH="$HOME/.local/bin:$PATH"
+
+if [ "${1:-}" = "--gui" ] || [ "${1:-}" = "--adw" ]; then
+  if command -v theme-menu-gui >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    exec theme-menu-gui
+  fi
+fi
+
+PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+[ -f "$PRESETS_FILE" ] || { echo "Файл пресетов не найден: $PRESETS_FILE" >&2; exit 1; }
+
+STATE_FILE="$HOME/.local/state/theme-manager/current"
+CURRENT_ID=""
+[ -f "$STATE_FILE" ] && CURRENT_ID="$(tr -d ' \n\r' < "$STATE_FILE")"
+
+ROFI_ARGS=(
+  -dmenu -i -show-icons -p "󰏘  Темы"
+  -mesg "Enter — применить  •  Esc — закрыть"
+  -format "i"
+)
+[ -f "$HOME/.config/rofi/theme-selector.rasi" ] && ROFI_ARGS+=(-theme "$HOME/.config/rofi/theme-selector.rasi")
+
+IDS=()
+IDX=0
+ACTIVE_IDX=""
+while IFS=$'\t' read -r id name icon img; do
+  IDS+=("$id")
+  [ "$id" = "$CURRENT_ID" ] && ACTIVE_IDX="$IDX"
+  IDX=$((IDX + 1))
+done < <(jq -r '.presets[] | [ .id, .name, .icon, (.wallpaper.fallback_image // .wallpaper.path // "") ] | @tsv' "$PRESETS_FILE")
+
+[ -n "$ACTIVE_IDX" ] && ROFI_ARGS+=(-a "$ACTIVE_IDX" -selected-row "$ACTIVE_IDX")
+
+SELECTED_IDX="$(
+  while IFS=$'\t' read -r id name icon img; do
+    img="${img/#\~/$HOME}"
+    label="$name"
+    [ "$id" = "$CURRENT_ID" ] && label="$name  ✦"
+    if [ -n "$img" ] && [ -f "$img" ]; then
+      printf '%s\0icon\x1f%s\n' "$label" "$img"
+    else
+      printf '%s\n' "$label"
+    fi
+  done < <(jq -r '.presets[] | [ .id, .name, .icon, (.wallpaper.fallback_image // .wallpaper.path // "") ] | @tsv' "$PRESETS_FILE") | rofi "${ROFI_ARGS[@]}" || true
+)"
+
+[ -z "$SELECTED_IDX" ] && exit 0
+TARGET_ID="${IDS[$SELECTED_IDX]:-}"
+[ -n "$TARGET_ID" ] && exec theme-apply "$TARGET_ID"
