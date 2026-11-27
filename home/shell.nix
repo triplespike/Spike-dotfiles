@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, userConfig ? import ../user-config.nix, ... }:
 
 let
   esc = builtins.fromJSON ''"\u001b"'';
@@ -240,8 +240,8 @@ in {
       settings = {
         safe.directory = "/etc/nixos";
         user = {
-          name = "Spike";
-          email = "spike@nixos.local";
+          name = lib.mkDefault userConfig.gitName;
+          email = lib.mkDefault userConfig.gitEmail;
         };
       };
     };

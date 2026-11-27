@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ pkgs, lib, inputs, userConfig ? import ./user-config.nix, ... }:
 
 let
   satellitePkgs = import inputs.nixpkgs-satellite {
@@ -16,9 +16,9 @@ in {
   ];
 
   home = {
-    username = "spike";
-    homeDirectory = "/home/spike";
-    stateVersion = "26.05";
+    username = lib.mkDefault userConfig.username;
+    homeDirectory = lib.mkDefault "/home/${userConfig.username}";
+    stateVersion = lib.mkDefault "26.05";
 
     sessionPath = [
       "$HOME/.local/bin"

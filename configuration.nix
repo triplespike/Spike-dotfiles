@@ -2,14 +2,14 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, userConfig ? import ./user-config.nix, ... }:
 
-{
-  imports = [
-    # Include the results of the hardware scan.
-    ./hardware-configuration.nix
-    ./performance.nix
-  ];
+let
+  isNvidia = userConfig.gpu == "nvidia";
+in {
+  imports =
+    lib.optional (builtins.pathExists ./hardware-configuration.nix) ./hardware-configuration.nix
+    ++ [ ./performance.nix ];
 
   # ==========================================================
   #                        Boot / Bootloader
@@ -34,8 +34,10 @@
 
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Разрешаем TRIM / discard для зашифрованного NVMe SSD (LUKS)
-  boot.initrd.luks.devices."cryptroot".allowDiscards = true;
+  # Разрешаем TRIM / discard для зашифрованного NVMe SSD (только если включено в user-config.nix)
+  boot.initrd.luks.devices = lib.mkIf userConfig.luksCryptroot {
+    "cryptroot".allowDiscards = true;
+  };
 
   # Zen-ядро с низкими задержками для десктопа и игр
   boot.kernelPackages = pkgs.linuxPackages_zen;
@@ -44,7 +46,7 @@
   #                        Networking
   # ==========================================================
 
-  networking.hostName = "nixos";
+  networking.hostName = userConfig.hostName;
   networking.networkmanager.enable = true;
 
   # Разрешаем асимметричный трафик туннеля (критично для UDP в Discord)
@@ -64,19 +66,19 @@
   #                        Locale / Time
   # ==========================================================
 
-  time.timeZone = "Europe/Moscow";
-  i18n.defaultLocale = "ru_RU.UTF-8";
+  time.timeZone = userConfig.timeZone;
+  i18n.defaultLocale = userConfig.locale;
 
   i18n.extraLocaleSettings = {
-    LC_ADDRESS = "ru_RU.UTF-8";
-    LC_IDENTIFICATION = "ru_RU.UTF-8";
-    LC_MEASUREMENT = "ru_RU.UTF-8";
-    LC_MONETARY = "ru_RU.UTF-8";
-    LC_NAME = "ru_RU.UTF-8";
-    LC_NUMERIC = "ru_RU.UTF-8";
-    LC_PAPER = "ru_RU.UTF-8";
-    LC_TELEPHONE = "ru_RU.UTF-8";
-    LC_TIME = "ru_RU.UTF-8";
+    LC_ADDRESS = userConfig.locale;
+    LC_IDENTIFICATION = userConfig.locale;
+    LC_MEASUREMENT = userConfig.locale;
+    LC_MONETARY = userConfig.locale;
+    LC_NAME = userConfig.locale;
+    LC_NUMERIC = userConfig.locale;
+    LC_PAPER = userConfig.locale;
+    LC_TELEPHONE = userConfig.locale;
+    LC_TIME = userConfig.locale;
   };
 
   # ==========================================================
@@ -183,15 +185,15 @@
   ];
 
   # ==========================================================
-  #                        Graphics / NVIDIA
+  #                        Graphics / GPU
   # ==========================================================
 
   hardware.graphics.enable = true;
   hardware.graphics.enable32Bit = true;
 
-  services.xserver.videoDrivers = [ "nvidia" ];
+  services.xserver.videoDrivers = if isNvidia then [ "nvidia" ] else [ "modesetting" ];
 
-  hardware.nvidia = {
+  hardware.nvidia = lib.mkIf isNvidia {
     modesetting.enable = true;
     # powerManagement.enable задаётся в performance.nix
     open = false;
@@ -199,25 +201,27 @@
     package = config.boot.kernelPackages.nvidiaPackages.latest;
   };
 
-  # ВСТАВИТЬ СЮДА: Фикс зависания кадров в играх под Niri на NVIDIA
-  environment.etc."nvidia/nvidia-application-profiles-rc.d/50-limit-free-buffer-pool-in-wayland-compositors.json".text = ''
-    {
-      "rules": [
-        {
-          "pattern": { "feature": "procname", "matches": "niri" },
-          "profile": "Limit Free Buffer Pool On Wayland Compositors"
-        }
-      ],
-      "profiles": [
-        {
-          "name": "Limit Free Buffer Pool On Wayland Compositors",
-          "settings": [
-            { "key": "GLVidHeapReuseRatio", "value": 0 }
-          ]
-        }
-      ]
-    }
-  '';
+  # Фикс зависания кадров в играх под Niri на NVIDIA
+  environment.etc."nvidia/nvidia-application-profiles-rc.d/50-limit-free-buffer-pool-in-wayland-compositors.json" = lib.mkIf isNvidia {
+    text = ''
+      {
+        "rules": [
+          {
+            "pattern": { "feature": "procname", "matches": "niri" },
+            "profile": "Limit Free Buffer Pool On Wayland Compositors"
+          }
+        ],
+        "profiles": [
+          {
+            "name": "Limit Free Buffer Pool On Wayland Compositors",
+            "settings": [
+              { "key": "GLVidHeapReuseRatio", "value": 0 }
+            ]
+          }
+        ]
+      }
+    '';
+  };
 
   # ==========================================================
   #                        Audio
@@ -293,9 +297,9 @@
   #                        Users
   # ==========================================================
 
-  users.users."spike" = {
+  users.users.${userConfig.username} = {
     isNormalUser = true;
-    description = "Spike";
+    description = userConfig.userDescription;
     shell = pkgs.fish;
     extraGroups = [ "networkmanager" "wheel" "dialout" "uucp" ];
   };
@@ -313,8 +317,8 @@
   # Периодический TRIM для поддержания скорости и ресурса SSD/NVMe
   services.fstrim.enable = true;
 
-  # Автоматическая ежемесячная проверка целостности Btrfs
-  services.btrfs.autoScrub = {
+  # Автоматическая ежемесячная проверка целостности Btrfs (только если включено в user-config.nix)
+  services.btrfs.autoScrub = lib.mkIf userConfig.btrfsScrub {
     enable = true;
     interval = "monthly";
     fileSystems = [ "/" ];
@@ -367,7 +371,7 @@
     defaultNetwork.settings.dns_enabled = true;
   };
 
-  hardware.nvidia-container-toolkit.enable = true;
+  hardware.nvidia-container-toolkit.enable = isNvidia;
 
   # Fish остаётся системным login shell; пользовательские настройки живут в home.nix.
   programs.fish.enable = true;
@@ -457,7 +461,7 @@
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.settings.warn-dirty = true;
-  nix.settings.trusted-users = [ "root" "@wheel" "spike" ];
+  nix.settings.trusted-users = [ "root" "@wheel" userConfig.username ];
 
   # Еженедельная автоматическая дедупликация store жесткими ссылками
   nix.optimise = {

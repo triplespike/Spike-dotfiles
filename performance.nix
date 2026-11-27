@@ -1,8 +1,10 @@
-# Performance and system tuning for AMD Ryzen 3 3300X, NVIDIA GTX 1660 SUPER, ZRAM, and BORE
-{ config, pkgs, lib, ... }:
+# Performance and system tuning (ZRAM, BBR, Ananicy-cpp, GameMode, optional NVIDIA PM)
+{ config, pkgs, lib, userConfig ? import ./user-config.nix, ... }:
 
-{
-  # 1. Параметры ядра для процессора AMD Zen 2 (Ryzen 3 3300X)
+let
+  isNvidia = userConfig.gpu == "nvidia";
+in {
+  # 1. Параметры ядра (amd_pstate безопасно игнорируется на Intel)
   boot.kernelParams = [
     "amd_pstate=active"
     "split_lock_detect=off"
@@ -72,12 +74,12 @@
   };
 
   # 4. Сохранение VRAM видеокарты NVIDIA при сне/гибернации
-  hardware.nvidia.powerManagement.enable = lib.mkForce true;
+  hardware.nvidia.powerManagement.enable = lib.mkIf isNvidia (lib.mkForce true);
 
-  # Права GameMode для пользователя spike
-  users.users."spike".extraGroups = [ "gamemode" ];
+  # Права GameMode для основного пользователя
+  users.users.${userConfig.username}.extraGroups = [ "gamemode" ];
 
-  # Настройки GameMode (автоматический разгон PowerMizer и приоритет в играх)
+  # Настройки GameMode (автоматический разгон и приоритет в играх)
   programs.gamemode = {
     enable = true;
     enableRenice = true;
@@ -89,7 +91,7 @@
         ioprio = 0;
         disable_splitlock = 1;
       };
-      gpu = {
+      gpu = lib.mkIf isNvidia {
         apply_gpu_optimisations = "accept-responsibility";
         nv_powermizer_mode = 1;
       };

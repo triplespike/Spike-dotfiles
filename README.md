@@ -139,6 +139,38 @@
 
 ---
 
+## ❄️ Quick Start for NixOS
+
+There are 3 ways to try or adopt this setup on **NixOS** (supports **NVIDIA**, **AMD**, **Intel**, and **QEMU VM**):
+
+### 1. Try it safely in a QEMU VM (zero changes to your host)
+```bash
+nix build github:triplespike/Spike-dotfiles#nixosConfigurations.vm.config.system.build.vm
+SDL_VIDEODRIVER=wayland ./result/bin/run-nixos-vm
+```
+*(Autologins into Niri as `spike` / password `spike`. Press `Ctrl+Alt+G` in the VM window to grab/release `Mod`/`Super`.)*
+
+### 2. Import only the rice into your existing NixOS Flake (safest!)
+Keep your own `configuration.nix`, disks, bootloader, and GPU drivers — just add `spike-dotfiles` to your `flake.nix` and import its Home Manager module:
+```nix
+inputs.spike-dotfiles.url = "github:triplespike/Spike-dotfiles";
+
+# Inside your Home Manager user config:
+imports = [ inputs.spike-dotfiles.homeManagerModules.default ];
+```
+
+### 3. Deploy the full NixOS Flake on your machine
+```bash
+git clone https://github.com/triplespike/Spike-dotfiles.git ~/Spike-dotfiles
+cd ~/Spike-dotfiles
+cp /etc/nixos/hardware-configuration.nix ./hardware-configuration.nix
+# Edit username, gpu ("nvidia" | "amd" | "intel"), luksCryptroot, btrfsScrub, locale:
+nano user-config.nix
+sudo nixos-rebuild test --flake .#nixos
+```
+
+---
+
 ## 🐧 Arch Linux / CachyOS / EndeavourOS
 
 Для Arch-подобных дистрибутивов подготовлен отдельный портативный комплект в [`arch/`](arch/README.md) (без NixOS-зависимостей, с автоопределением монитора, сборкой `ryoku-livewall`, локальными обоями и `install.sh`):
