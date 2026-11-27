@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Меню выбора темы (горизонтальная карусель Rofi по умолчанию, GTK4/Libadwaita по --gui)
+# Меню выбора темы (наклонная лента параллелограммов GTK4+LayerShell по умолчанию, Rofi --rofi, Adwaita --gui)
 set -euo pipefail
 
 export PATH="$HOME/.local/bin:$PATH"
+
+PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+[ -f "$PRESETS_FILE" ] || { echo "Файл пресетов не найден: $PRESETS_FILE" >&2; exit 1; }
 
 if [ "${1:-}" = "--gui" ] || [ "${1:-}" = "--adw" ]; then
   if command -v theme-menu-gui >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}" ]; then
@@ -10,8 +13,19 @@ if [ "${1:-}" = "--gui" ] || [ "${1:-}" = "--adw" ]; then
   fi
 fi
 
-PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
-[ -f "$PRESETS_FILE" ] || { echo "Файл пресетов не найден: $PRESETS_FILE" >&2; exit 1; }
+if [ "${1:-}" != "--rofi" ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v theme-menu-parallelogram >/dev/null 2>&1; then
+  command -v theme-thumbnails >/dev/null 2>&1 && theme-thumbnails >/dev/null 2>&1 || true
+  PRELOAD="${LD_PRELOAD:-}"
+  for cand in /usr/lib/libgtk4-layer-shell.so /usr/lib64/libgtk4-layer-shell.so; do
+    if [ -f "$cand" ]; then
+      PRELOAD="${cand}${PRELOAD:+:$PRELOAD}"
+      break
+    fi
+  done
+  if env GDK_BACKEND=wayland LD_PRELOAD="$PRELOAD" theme-menu-parallelogram; then
+    exit 0
+  fi
+fi
 
 STATE_FILE="$HOME/.local/state/theme-manager/current"
 CURRENT_ID=""

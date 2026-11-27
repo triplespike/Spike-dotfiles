@@ -411,12 +411,14 @@ EOF
 
   themePython = pkgs.python3.withPackages (ps: with ps; [
     pygobject3
+    pycairo
     pillow
   ]);
 
   themeTypelibPath = pkgs.lib.makeSearchPath "lib/girepository-1.0" [
     pkgs.libadwaita
     pkgs.gtk4
+    pkgs.gtk4-layer-shell
     pkgs.pango.out
     pkgs.graphene
     pkgs.harfbuzz
@@ -434,7 +436,17 @@ EOF
     set -euo pipefail
     export PATH="${themeApply}/bin:${themeThumbnails}/bin:${pkgs.rofi}/bin:${pkgs.jq}/bin:$PATH"
 
-    # Поддержка явного запуска оригинального GTK4/Adwaita интерфейса через --gui / --adw
+    PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
+    if [ ! -f "$PRESETS_FILE" ]; then
+      theme-restore --init-only || true
+    fi
+
+    if [ ! -f "$PRESETS_FILE" ]; then
+      echo "Файл пресетов не найден: $PRESETS_FILE" >&2
+      exit 1
+    fi
+
+    # --gui / --adw: классическое окно Libadwaita
     if [ "''${1:-}" = "--gui" ] || [ "''${1:-}" = "--adw" ]; then
       export GSK_RENDERER="gl"
       export GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
@@ -445,14 +457,23 @@ EOF
       fi
     fi
 
-    PRESETS_FILE="$HOME/.config/theme-manager/presets.json"
-    if [ ! -f "$PRESETS_FILE" ]; then
-      theme-restore --init-only || true
-    fi
-
-    if [ ! -f "$PRESETS_FILE" ]; then
-      echo "Файл пресетов не найден: $PRESETS_FILE" >&2
-      exit 1
+    # По умолчанию: наклонная лента параллелограммов на GTK4 + Layer-Shell + Cairo
+    if [ "''${1:-}" != "--rofi" ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
+      PARA_SCRIPT="$HOME/Spike-dotfiles/scripts/theme-menu-parallelogram.py"
+      [ -f "$PARA_SCRIPT" ] || PARA_SCRIPT="${../scripts/theme-menu-parallelogram.py}"
+      if [ -f "$PARA_SCRIPT" ]; then
+        STORE_WP_DIR="''${STORE_WP_DIR:-${../assets/wallpapers}}"
+        STORE_WP_DIR="$STORE_WP_DIR" theme-thumbnails >/dev/null 2>&1 || true
+        if ${pkgs.coreutils}/bin/env \
+          GDK_BACKEND=wayland \
+          GSK_RENDERER=gl \
+          GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}" \
+          LD_PRELOAD="${pkgs.gtk4-layer-shell}/lib/libgtk4-layer-shell.so''${LD_PRELOAD:+:$LD_PRELOAD}" \
+          STORE_WP_DIR="$STORE_WP_DIR" \
+          ${themePython}/bin/python3 "$PARA_SCRIPT"; then
+          exit 0
+        fi
+      fi
     fi
 
     STATE_FILE="$HOME/.local/state/theme-manager/current"

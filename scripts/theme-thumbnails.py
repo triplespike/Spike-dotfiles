@@ -111,6 +111,24 @@ def build_poster(src_img: Path, swatches: list[str], out_path: Path, centering: 
     tmp.replace(out_path)
 
 
+def build_card_preview(src_img: Path, out_path: Path, centering: tuple[float, float] = (0.5, 0.5)) -> None:
+    """Create fast-loading 960x540 (16:9) JPEG preview for the parallelogram switcher."""
+    with Image.open(src_img) as im:
+        im = im.convert("RGB")
+        cover = ImageOps.fit(im, (960, 540), method=Image.Resampling.LANCZOS, centering=centering)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out_path.with_name(f".{out_path.name}.tmp")
+    cover.save(tmp, format="JPEG", quality=92, optimize=True)
+    tmp.replace(out_path)
+
+
+def _needs_rebuild(out_path: Path, src_path: Path, presets_mtime: float) -> bool:
+    if not out_path.is_file():
+        return True
+    out_m = out_path.stat().st_mtime
+    return out_m < presets_mtime or out_m < src_path.stat().st_mtime
+
+
 def main() -> int:
     home = Path(os.environ.get("HOME", Path.home()))
     presets_file = home / ".config/theme-manager/presets.json"
@@ -122,8 +140,11 @@ def main() -> int:
     if not store_wp_dir.is_dir():
         store_wp_dir = None
 
-    cache_dir = Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")) / "theme-manager/thumbnails"
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_root = Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")) / "theme-manager"
+    thumb_dir = cache_root / "thumbnails"
+    card_dir = cache_root / "cards"
+    thumb_dir.mkdir(parents=True, exist_ok=True)
+    card_dir.mkdir(parents=True, exist_ok=True)
 
     presets_mtime = max(presets_file.stat().st_mtime, Path(__file__).stat().st_mtime)
     data = json.loads(presets_file.read_text(encoding="utf-8"))
@@ -135,15 +156,15 @@ def main() -> int:
         src = resolve_image(preset, store_wp_dir, home)
         if src is None:
             continue
-        out = cache_dir / f"{pid}.png"
-        need_build = not out.is_file()
-        if not need_build:
-            out_m = out.stat().st_mtime
-            if out_m < presets_mtime or out_m < src.stat().st_mtime:
-                need_build = True
-        if need_build:
-            centering = (0.90, 0.55) if pid == "tame-impala" else (0.5, 0.5)
-            build_poster(src, extract_swatches(preset), out, centering=centering)
+        centering = (0.90, 0.55) if pid == "tame-impala" else (0.5, 0.5)
+
+        out_thumb = thumb_dir / f"{pid}.png"
+        if _needs_rebuild(out_thumb, src, presets_mtime):
+            build_poster(src, extract_swatches(preset), out_thumb, centering=centering)
+
+        out_card = card_dir / f"{pid}.jpg"
+        if _needs_rebuild(out_card, src, presets_mtime):
+            build_card_preview(src, out_card, centering=centering)
 
     return 0
 

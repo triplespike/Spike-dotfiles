@@ -45,7 +45,7 @@ PACMAN_PKGS=(
   grim slurp wl-clipboard cliphist swaybg hyprpicker
   tesseract tesseract-data-eng tesseract-data-rus zbar ffmpeg libnotify
   btop cava bat eza zoxide fzf yazi satty
-  python python-gobject python-pillow gtk4 libadwaita xdg-utils
+  python python-gobject python-cairo python-pillow gtk4 gtk4-layer-shell libadwaita xdg-utils
   ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
   base-devel pkgconf wayland wayland-protocols
 )
@@ -173,8 +173,9 @@ done
 for f in color-pick discord-compress ocr-grab qr-scan songrec-grab obs-control; do
   install -m 0755 "$REPO_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
-install -m 0755 "$REPO_DIR/scripts/theme-menu-gui.py"      "$HOME/.local/bin/theme-menu-gui"
-install -m 0755 "$REPO_DIR/scripts/theme-thumbnails.py"    "$HOME/.local/bin/theme-thumbnails"
+install -m 0755 "$REPO_DIR/scripts/theme-menu-parallelogram.py" "$HOME/.local/bin/theme-menu-parallelogram"
+install -m 0755 "$REPO_DIR/scripts/theme-menu-gui.py"           "$HOME/.local/bin/theme-menu-gui"
+install -m 0755 "$REPO_DIR/scripts/theme-thumbnails.py"         "$HOME/.local/bin/theme-thumbnails"
 install -m 0755 "$REPO_DIR/scripts/theme-inject-zen.py"    "$HOME/.local/bin/theme-inject-zen"
 install -m 0755 "$REPO_DIR/scripts/theme-inject-apps.py"   "$HOME/.local/bin/theme-inject-apps"
 install -m 0755 "$REPO_DIR/scripts/theme-zen-bridge.py"    "$HOME/.local/bin/theme-zen-bridge"
