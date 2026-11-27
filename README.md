@@ -171,17 +171,27 @@ sudo nixos-rebuild test --flake .#nixos
 
 ---
 
-## 🐧 Arch Linux / CachyOS / EndeavourOS
+## 🐧 Quick Start for Arch Linux / CachyOS / EndeavourOS
 
-Для Arch-подобных дистрибутивов подготовлен отдельный портативный комплект в [`arch/`](arch/README.md) (без NixOS-зависимостей, с автоопределением монитора, сборкой `ryoku-livewall`, локальными обоями и `install.sh`):
+A standalone, zero-Nix portable installer is bundled in [`arch/`](arch/README.md) — it installs Niri, Noctalia (with all 7 offline palettes), dark GTK + Qt/Dolphin (`BreezeDark`), Polkit + NTFS mounting, Gwenview/mpv defaults, Zen Browser live-theme setup, and compiles `ryoku-livewall` automatically (while backing up your existing `~/.config` files):
 
+### 1. Full install (packages + configs + `ryoku-livewall`)
 ```bash
 git clone https://github.com/triplespike/Spike-dotfiles.git ~/Spike-dotfiles
 cd ~/Spike-dotfiles
 ./arch/install.sh
 ```
+*(Pass `--noconfirm` / `--yes` for unattended install. If `yay` or `paru` is installed, AUR extras like `zen-browser-bin`, `catppuccin-cursors-mocha`, `mpvpaper`, and `songrec` are installed automatically too.)*
 
-Подробнее — в [arch/README.md](arch/README.md).
+### 2. Configs & scripts only (keep your existing packages)
+```bash
+./arch/install.sh --no-packages
+```
+
+### 3. Launch Niri
+Select **Niri** in your display manager (or run `niri-session` from a TTY), then press `Mod + Shift + T` to switch themes or `Mod + D` for the Noctalia launcher.
+
+See [`arch/README.md`](arch/README.md) for the full breakdown.
 
 ---
 
@@ -209,7 +219,8 @@ Spike-dotfiles/
 ├── niri.kdl                    # Niri scroll-compositor window rules and binds
 ├── configuration.nix           # System-level NixOS configuration (UUIDs masked)
 ├── performance.nix             # System/audio/gaming tuning module
-├── flake.nix                   # Flake inputs & system declaration
+├── flake.nix                   # Flake inputs, NixOS/VM targets & homeManagerModules.default
+├── user-config.nix             # Single-file user/GPU/LUKS/locale settings
 ├── hardware-configuration.nix.example # Hardware config template
 ├── home.nix                    # Home Manager entry point
 ├── LICENSE                     # MIT License
