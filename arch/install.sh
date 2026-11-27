@@ -12,7 +12,7 @@ FORCE=0
 for arg in "$@"; do
   case "$arg" in
     --no-packages) INSTALL_PKGS=0 ;;
-    --yes|-y) NONINTERACTIVE=1 ;;
+    --yes|-y|--noconfirm) NONINTERACTIVE=1 ;;
     --force) FORCE=1 ;;
     -h|--help)
       cat <<EOF
@@ -38,7 +38,8 @@ warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 PACMAN_PKGS=(
   niri ghostty fish starship fastfetch jq rofi
   noctalia adw-gtk-theme papirus-icon-theme breeze plasma-integration
-  dolphin firefox playerctl wireplumber
+  dolphin firefox playerctl pipewire-pulse wireplumber
+  xdg-desktop-portal-gnome xdg-desktop-portal-gtk
   polkit polkit-kde-agent udisks2 gvfs ntfs-3g
   gwenview mpv kdegraphics-thumbnailers ffmpegthumbs
   grim slurp wl-clipboard cliphist swaybg hyprpicker
