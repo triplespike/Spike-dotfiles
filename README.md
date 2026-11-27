@@ -103,6 +103,9 @@
 | **Audio** | PipeWire + WirePlumber |
 | **Cursor** | Catppuccin Mocha Dark |
 
+> [!NOTE]
+> **Live Wallpapers & Wallpaper Engine:** All 7 system color schemes (Noctalia, Niri, Ghostty, Zen Browser, Cava, Btop, Lava) work completely offline out of the box. Built-in seamless video loops (`cyberpunk.mp4`, `medieval-loop.mp4`, plus `catppuccin.mp4` on Arch) play locally via `ryoku-livewall`. Other themes (`Nullscapes`, `Shardscapes`, `Tokyo Night`, `Nord Aurora`, and `Catppuccin` on NixOS) point to local **Steam / Wallpaper Engine** Workshop items — if you do not own/install them, `theme-apply` automatically falls back to clean static `.png` wallpapers from `assets/wallpapers/`.
+
 ---
 
 ## ⌨️ Keybindings Cheatsheet

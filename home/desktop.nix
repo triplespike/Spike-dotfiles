@@ -212,35 +212,35 @@ in {
           capsule_group = [
             {
               id = "lunar";
-              members = [ "launcher" "wallpaper" "workspaces" "clock" ];
-              fill = "surface_variant";
-              border = "outline";
+              members = [ "wallpaper" "workspaces" "clock" ];
+              fill = "surface_container";
+              border = "outline_variant";
               foreground = "on_surface";
               padding = 10;
-              radius = 16;
-              opacity = 0.58;
+              radius = 12;
+              opacity = 0.56;
               widget_spacing = 8;
             }
             {
               id = "pulse";
               members = [ "audio_visualizer" "media" "audio_visualizer" ];
-              fill = "surface_variant";
-              border = "outline";
+              fill = "surface_container";
+              border = "outline_variant";
               foreground = "on_surface";
               padding = 12;
-              radius = 16;
-              opacity = 0.64;
+              radius = 14;
+              opacity = 0.62;
               widget_spacing = 8;
             }
             {
               id = "signal";
-              members = [ "tray" "notifications" "clipboard" "network" "bluetooth" "volume" "brightness" "battery" "control-center" "session" ];
-              fill = "surface_variant";
-              border = "outline";
+              members = [ "tray" "notifications" "cpu" "ram" "volume" "network" "session" ];
+              fill = "surface_container";
+              border = "outline_variant";
               foreground = "on_surface";
               padding = 10;
-              radius = 16;
-              opacity = 0.58;
+              radius = 12;
+              opacity = 0.56;
               widget_spacing = 8;
             }
           ];
@@ -262,9 +262,9 @@ in {
           capsule_group = [
             {
               id = "quick";
-              members = [ "launcher" "wallpaper" "media" "audio_visualizer" ];
-              fill = "surface_variant";
-              border = "outline";
+              members = [ "wallpaper" "media" "audio_visualizer" ];
+              fill = "surface_container";
+              border = "outline_variant";
               foreground = "on_surface";
               padding = 10;
               radius = 16;
@@ -274,8 +274,8 @@ in {
             {
               id = "island";
               members = [ "workspaces" "clock" ];
-              fill = "surface_variant";
-              border = "outline";
+              fill = "surface_container";
+              border = "outline_variant";
               foreground = "on_surface";
               padding = 10;
               radius = 16;
@@ -284,13 +284,13 @@ in {
             }
             {
               id = "signal";
-              members = [ "tray" "notifications" "clipboard" "network" "bluetooth" "volume" "brightness" "battery" "control-center" "session" ];
-              fill = "surface_variant";
-              border = "outline";
+              members = [ "tray" "notifications" "cpu" "ram" "volume" "network" "session" ];
+              fill = "surface_container";
+              border = "outline_variant";
               foreground = "on_surface";
               padding = 10;
-              radius = 16;
-              opacity = 0.58;
+              radius = 12;
+              opacity = 0.56;
               widget_spacing = 8;
             }
           ];
@@ -307,10 +307,19 @@ in {
         custom_palette = "Nullscapes";
       };
       shell = {
+        lang = "ru";
         corner_radius_scale = 0.88;
         font_family = "JetBrainsMono Nerd Font";
+        app_icon_color = "secondary";
+        button_borders = false;
+        card_borders = false;
+        launcher.colorize_icons = true;
+        window_switcher.colorize_icons = true;
         panel = {
-          transparency_mode = "soft";
+          transparency_mode = "glass";
+          control_center_placement = "floating";
+          floating_layer = "top";
+          wallpaper_position = "center";
           borders = true;
           shadow = true;
         };
@@ -323,15 +332,41 @@ in {
         };
       };
       bar.main = barPresets.${activeBar};
-      widget.audio_visualizer = {
-        width = 56;
-        bands = 20;
-        mirrored = true;
-        reversed = false;
-        centered = true;
-        show_when_idle = false;
-        color_1 = "#678FE4";
-        color_2 = "#AB66CC";
+      widget = {
+        audio_visualizer = {
+          width = 56;
+          bands = 20;
+          mirrored = true;
+          reversed = false;
+          centered = true;
+          show_when_idle = true;
+          color = "secondary";
+          color_1 = "#678FE4";
+          color_2 = "#AB66CC";
+        };
+        clock.color = "secondary";
+        cpu = {
+          color = "secondary";
+          icon_color = "secondary";
+        };
+        ram = {
+          color = "secondary";
+          icon_color = "secondary";
+        };
+        network = {
+          color = "secondary";
+          icon_color = "secondary";
+          show_label = false;
+        };
+        tray = {
+          color = "secondary";
+          icon_color = "secondary";
+          colorize_icons = true;
+        };
+        workspaces = {
+          colorize_icons = true;
+          show_labels = false;
+        };
       };
       osd = {
         position = "top_center";
@@ -391,6 +426,52 @@ in {
           blue = "#829AFF";
           magenta = "#C77DFF";
           cyan = "#AED8FF";
+          white = "#FFFFFF";
+        };
+      };
+    };
+    customPalettes.Shardscapes.dark = {
+      mError = "#D95763";
+      mHover = "#212833";
+      mOnError = "#0F1216";
+      mOnHover = "#CCD3DE";
+      mOnPrimary = "#FFFFFF";
+      mOnSecondary = "#CCD3DE";
+      mOnSurface = "#CCD3DE";
+      mOnSurfaceVariant = "#8C97A8";
+      mOnTertiary = "#FFFFFF";
+      mOutline = "#374151";
+      mPrimary = "#5A6B82";
+      mSecondary = "#475466";
+      mShadow = "#05070A";
+      mSurface = "#0F1216";
+      mSurfaceVariant = "#161B22";
+      mTertiary = "#708199";
+      terminal = {
+        background = "#0F1216";
+        foreground = "#CCD3DE";
+        cursor = "#6A7687";
+        cursorText = "#0F1216";
+        selectionBg = "#252B36";
+        selectionFg = "#FFFFFF";
+        normal = {
+          black = "#0F1216";
+          red = "#D95763";
+          green = "#7E997A";
+          yellow = "#C29D62";
+          blue = "#5A6B82";
+          magenta = "#7D6E8D";
+          cyan = "#5C7C8A";
+          white = "#CCD3DE";
+        };
+        bright = {
+          black = "#262C37";
+          red = "#E56874";
+          green = "#8FAE8A";
+          yellow = "#D1AC6E";
+          blue = "#6A7E99";
+          magenta = "#907FA3";
+          cyan = "#6B8F9E";
           white = "#FFFFFF";
         };
       };

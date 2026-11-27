@@ -16,36 +16,36 @@ thickness = 40
 widget_spacing = 8
 
 [[bar.main.capsule_group]]
-border = "outline"
-fill = "surface_variant"
+border = "outline_variant"
+fill = "surface_container"
 foreground = "on_surface"
 id = "lunar"
-members = ["launcher", "wallpaper", "workspaces", "clock"]
-opacity = 0.58
+members = ["wallpaper", "workspaces", "clock"]
+opacity = 0.56
 padding = 10
-radius = 16
+radius = 12
 widget_spacing = 8
 
 [[bar.main.capsule_group]]
-border = "outline"
-fill = "surface_variant"
+border = "outline_variant"
+fill = "surface_container"
 foreground = "on_surface"
 id = "pulse"
 members = ["audio_visualizer", "media", "audio_visualizer"]
-opacity = 0.64
+opacity = 0.62
 padding = 12
-radius = 16
+radius = 14
 widget_spacing = 8
 
 [[bar.main.capsule_group]]
-border = "outline"
-fill = "surface_variant"
+border = "outline_variant"
+fill = "surface_container"
 foreground = "on_surface"
 id = "signal"
-members = ["tray", "notifications", "clipboard", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
-opacity = 0.58
+members = ["tray", "notifications", "cpu", "ram", "volume", "network", "session"]
+opacity = 0.56
 padding = 10
-radius = 16
+radius = 12
 widget_spacing = 8
 
 [osd]
@@ -64,13 +64,23 @@ volume_output = true
 wifi = true
 
 [shell]
+app_icon_color = "secondary"
+button_borders = false
+card_borders = false
 corner_radius_scale = 0.88
 font_family = "JetBrainsMono Nerd Font"
+lang = "ru"
+
+[shell.launcher]
+colorize_icons = true
 
 [shell.panel]
 borders = true
+control_center_placement = "floating"
+floating_layer = "top"
 shadow = true
-transparency_mode = "soft"
+transparency_mode = "glass"
+wallpaper_position = "center"
 
 [shell.screenshot]
 copy_to_clipboard = false
@@ -78,6 +88,9 @@ freeze_screen = true
 pipe_command = "satty --filename - --fullscreen --output-filename __HOME__/Pictures/Screenshots/Screenshot-%Y-%m-%d_%H-%M-%S.png"
 pipe_to_command = true
 save_to_file = false
+
+[shell.window_switcher]
+colorize_icons = true
 
 [theme]
 custom_palette = "Nullscapes"
@@ -87,9 +100,35 @@ source = "custom"
 [widget.audio_visualizer]
 bands = 20
 centered = true
+color = "secondary"
 color_1 = "#678FE4"
 color_2 = "#AB66CC"
 mirrored = true
 reversed = false
-show_when_idle = false
+show_when_idle = true
 width = 56
+
+[widget.clock]
+color = "secondary"
+
+[widget.cpu]
+color = "secondary"
+icon_color = "secondary"
+
+[widget.network]
+color = "secondary"
+icon_color = "secondary"
+show_label = false
+
+[widget.ram]
+color = "secondary"
+icon_color = "secondary"
+
+[widget.tray]
+color = "secondary"
+colorize_icons = true
+icon_color = "secondary"
+
+[widget.workspaces]
+colorize_icons = true
+show_labels = false

@@ -23,7 +23,7 @@ cd ~/Spike-dotfiles
 - **Тёмная тема GTK + Qt/Dolphin и курсор** (`adw-gtk3-dark`, `BreezeDark` в `kdeglobals`, `Papirus-Dark`, `catppuccin-mocha-dark-cursors`) — конфиги GTK 3/4, Qt/KDE (`QT_QPA_PLATFORMTHEME=kde`), `gsettings` (`prefer-dark`) и XCursor.
 - **Zen Browser (`zen-browser-bin`) + Firefox** — `user.js`, стеклянный `userChrome.css`, кастомная новая вкладка, и встроенный подписанный XPI `ryoku-zen-palette@local` для живой перекраски без перезапуска через `theme-zen-bridge.service`.
 - **Niri** (`~/.config/niri/config.kdl`, `theme.kdl`, `autostart.sh`) — без жёсткого `HDMI-A-1`, с автопоиском установленных программ и пробросом `~/.local/bin`.
-- **Theme Manager (`Mod+Shift+T`)** — 7 тем с локальными обоями из `assets/wallpapers/` (включая бесшовный `medieval-loop.mp4`), автоопределением монитора и лёгким нативным плеером `ryoku-livewall` (`wlr-layer-shell` + `wl_shm` + `libav`, резерв — `mpvpaper`/`swaybg`).
+- **Theme Manager (`Mod+Shift+T`)** — все 7 цветовых тем с оффлайн-палитрами Noctalia, автоопределением монитора и плеером `ryoku-livewall` (`wlr-layer-shell` + `wl_shm` + `libav`, резерв — `mpvpaper`/`swaybg`). Видео-обои **Catppuccin**, **Cyberpunk 2077** и **Medieval Grim** (`medieval-loop.mp4`) уже лежат в `assets/wallpapers/`, а остальные 4 темы (**Nullscapes**, **Shardscapes**, **Tokyo Night**, **Nord Aurora**) без установленного Wallpaper Engine используют статичные `.png` обои.
 - **Авто-пауза обоев в играх и фуллскрине** — `wallpaper-autopause.service`.
 - **Экранные и медиа-утилиты:**
   - `Mod+Shift+O` — `ocr-grab` (OCR выделенной области, `eng+rus` -> буфер обмена)

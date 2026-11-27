@@ -43,6 +43,29 @@ let
     # 1. Обои (видео через ryoku-livewall / mpvpaper / Workshop ID)
     WP_TYPE="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.type // "video"')"
     SCREEN="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.screen // "HDMI-A-1"')"
+    STORE_WP_DIR="${../assets/wallpapers}"
+
+    resolve_wp_path() {
+      local raw="$1"
+      [ -n "$raw" ] || return 0
+      raw="''${raw/#\~/$HOME}"
+      if [ -f "$raw" ]; then
+        printf '%s' "$raw"
+        return 0
+      fi
+      local base
+      base="$(${pkgs.coreutils}/bin/basename "$raw")"
+      if [ -f "$STORE_WP_DIR/$base" ]; then
+        printf '%s' "$STORE_WP_DIR/$base"
+      else
+        printf '%s' "$raw"
+      fi
+    }
+
+    if command -v niri >/dev/null 2>&1; then
+      ACTIVE_OUT="$(niri msg -j outputs 2>/dev/null | ${pkgs.jq}/bin/jq -r --arg s "$SCREEN" 'if .[$s] then $s else (keys[0] // "") end' || true)"
+      [ -n "$ACTIVE_OUT" ] && SCREEN="$ACTIVE_OUT"
+    fi
 
     stop_wallpapers() {
       ${pkgs.procps}/bin/pkill -CONT -f '(^|/)\.?linux-wallpaperengine([[:space:]]|$)' >/dev/null 2>&1 || true
@@ -63,10 +86,8 @@ let
 
     WALLPAPER_STARTED=1
     if [ "$WP_TYPE" = "video" ]; then
-      WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
-      WP_PATH="''${WP_PATH/#\~/$HOME}"
-      FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
-      FALLBACK="''${FALLBACK/#\~/$HOME}"
+      WP_PATH="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')")"
+      FALLBACK="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')")"
 
       stop_wallpapers
       if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
@@ -78,7 +99,7 @@ let
         ${pkgs.coreutils}/bin/sleep 0.4
         if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
           systemd-run --user --collect --unit=theme-wallpaper-video \
-            ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=nvdec" "$SCREEN" "$WP_PATH" >/dev/null || true
+            ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=auto-safe" "$SCREEN" "$WP_PATH" >/dev/null || true
           ${pkgs.coreutils}/bin/sleep 0.4
           if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
             echo "Не удалось запустить видеообои: $WP_PATH (оставлен fallback_image)" >&2
@@ -90,8 +111,7 @@ let
       fi
     elif [ "$WP_TYPE" = "wallpaperengine" ]; then
       WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id // .wallpaper.workshop_id // ""')"
-      FALLBACK="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')"
-      FALLBACK="''${FALLBACK/#\~/$HOME}"
+      FALLBACK="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')")"
 
       WE_TARGET=""
       if [ -n "$WE_ID" ]; then
@@ -141,8 +161,7 @@ let
         WALLPAPER_STARTED=0
       fi
     elif [ "$WP_TYPE" = "image" ] || [ "$WP_TYPE" = "static" ]; then
-      WP_PATH="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')"
-      WP_PATH="''${WP_PATH/#\~/$HOME}"
+      WP_PATH="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // .wallpaper.fallback_image // ""')")"
       stop_wallpapers
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
         noctalia msg wallpaper-set "$WP_PATH" >/dev/null 2>&1 || true
@@ -400,6 +419,7 @@ EOF
       export GSK_RENDERER="gl"
       export GI_TYPELIB_PATH="${themeTypelibPath}''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
       GUI_SCRIPT="$HOME/Spike-dotfiles/scripts/theme-menu-gui.py"
+      [ -f "$GUI_SCRIPT" ] || GUI_SCRIPT="${../scripts/theme-menu-gui.py}"
       if [ -f "$GUI_SCRIPT" ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
         exec ${themePython}/bin/python3 "$GUI_SCRIPT"
       fi
@@ -454,12 +474,18 @@ EOF
       ROFI_ARGS+=(-selected-row "$ACTIVE_INDEX" -a "$ACTIVE_INDEX")
     fi
 
+    STORE_WP_DIR="${../assets/wallpapers}"
     CHOSEN_INDEX="$(
       while IFS=$'\t' read -r id name icon fallback; do
         fallback="''${fallback/#\~/$HOME}"
         thumb="$CACHE_DIR/''${id}.jpg"
-        if [ ! -f "$thumb" ] && [ -n "$fallback" ] && [ -f "$fallback" ]; then
-          thumb="$fallback"
+        if [ ! -f "$thumb" ]; then
+          if [ -n "$fallback" ] && [ -f "$fallback" ]; then
+            thumb="$fallback"
+          elif [ -n "$fallback" ]; then
+            base="$(${pkgs.coreutils}/bin/basename "$fallback")"
+            [ -f "$STORE_WP_DIR/$base" ] && thumb="$STORE_WP_DIR/$base"
+          fi
         fi
         printf '%s  %s\0icon\x1f%s\n' "$icon" "$name" "$thumb"
       done < <(${pkgs.jq}/bin/jq -r '.presets[] | [ .id, .name, .icon, (.wallpaper.fallback_image // .wallpaper.path // "") ] | @tsv' "$PRESETS_FILE") | ${pkgs.rofi}/bin/rofi "''${ROFI_ARGS[@]}" || true
@@ -483,17 +509,27 @@ EOF
     CONFIG_DIR="$HOME/.config/theme-manager"
 
     mkdir -p "$STATE_DIR" "$CONFIG_DIR"
+    if [ ! -f "$CONFIG_DIR/presets.json" ]; then
+      ${pkgs.coreutils}/bin/cp -f ${../config/theme-manager/presets.json} "$CONFIG_DIR/presets.json"
+      ${pkgs.coreutils}/bin/chmod 0644 "$CONFIG_DIR/presets.json"
+    fi
 
     if [ "''${1:-}" = "--init-only" ]; then
       exit 0
     fi
 
+    SCREEN="HDMI-A-1"
+    if command -v niri >/dev/null 2>&1; then
+      OUT="$(niri msg -j outputs 2>/dev/null | ${pkgs.jq}/bin/jq -r 'keys[0] // ""' || true)"
+      [ -n "$OUT" ] && SCREEN="$OUT"
+    fi
+
     attempt=0
-    until noctalia msg wallpaper-get HDMI-A-1 >/dev/null 2>&1 || [ "$attempt" -ge 80 ]; do
+    until noctalia msg wallpaper-get "$SCREEN" >/dev/null 2>&1 || [ "$attempt" -ge 80 ]; do
       ${pkgs.coreutils}/bin/sleep 0.25
       attempt=$((attempt + 1))
     done
-    ${pkgs.coreutils}/bin/sleep 1
+    ${pkgs.coreutils}/bin/sleep 0.5
 
     CURRENT="nullscapes"
     if [ -f "$STATE_DIR/current" ]; then
@@ -591,8 +627,35 @@ in {
     lavat
   ];
 
-  # Инициализируем динамические файлы тем для Vesktop, VSCode, Firefox и Zen при активации
+  # Инициализируем стартовые файлы на чистой системе (не перезаписывая существующие)
+  # + обновляем динамические цвета Vesktop, VSCode, Firefox и Zen при активации
   home.activation.initAppThemeColors = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    run ${pkgs.coreutils}/bin/mkdir -p \
+      "$HOME/.config/niri" \
+      "$HOME/.config/theme-manager" \
+      "$HOME/.config/ghostty" \
+      "$HOME/.config/fastfetch" \
+      "$HOME/.local/state/noctalia/community-palettes"
+
+    if [ ! -e "$HOME/.config/niri/theme.kdl" ]; then
+      run ${pkgs.coreutils}/bin/install -m 0644 ${../theme.kdl} "$HOME/.config/niri/theme.kdl"
+    fi
+    if [ ! -e "$HOME/.config/theme-manager/presets.json" ]; then
+      run ${pkgs.coreutils}/bin/install -m 0644 ${../config/theme-manager/presets.json} "$HOME/.config/theme-manager/presets.json"
+    fi
+    if [ ! -e "$HOME/.config/fastfetch/logo.png" ]; then
+      run ${pkgs.coreutils}/bin/install -m 0644 ${../assets/fastfetch/logo.png} "$HOME/.config/fastfetch/logo.png"
+    fi
+    if [ ! -e "$HOME/.config/kdeglobals" ]; then
+      run ${pkgs.coreutils}/bin/install -m 0644 ${../arch/config/kdeglobals} "$HOME/.config/kdeglobals"
+    fi
+    for pal in ${../arch/config/noctalia/community-palettes}/*.json; do
+      base="$(${pkgs.coreutils}/bin/basename "$pal")"
+      if [ ! -e "$HOME/.local/state/noctalia/community-palettes/$base" ]; then
+        run ${pkgs.coreutils}/bin/install -m 0644 "$pal" "$HOME/.local/state/noctalia/community-palettes/$base"
+      fi
+    done
+
     run ${themeInjectApps}/bin/theme-inject-apps || true
     run ${pkgs.coreutils}/bin/env ZEN_NEWTAB_TEMPLATE="${../zen-newtab/index.html}" ${pkgs.python3}/bin/python3 ${../scripts/theme-inject-zen.py} || true
   '';
