@@ -463,7 +463,11 @@ EOF
       [ -f "$PARA_SCRIPT" ] || PARA_SCRIPT="${../scripts/theme-menu-parallelogram.py}"
       if [ -f "$PARA_SCRIPT" ]; then
         STORE_WP_DIR="''${STORE_WP_DIR:-${../assets/wallpapers}}"
-        STORE_WP_DIR="$STORE_WP_DIR" theme-thumbnails >/dev/null 2>&1 || true
+        if [ -d "$HOME/.cache/theme-manager/cards" ] && [ -n "$(ls -A "$HOME/.cache/theme-manager/cards" 2>/dev/null)" ]; then
+          STORE_WP_DIR="$STORE_WP_DIR" theme-thumbnails >/dev/null 2>&1 &
+        else
+          STORE_WP_DIR="$STORE_WP_DIR" theme-thumbnails >/dev/null 2>&1 || true
+        fi
         if ${pkgs.coreutils}/bin/env \
           GDK_BACKEND=wayland \
           GSK_RENDERER=gl \

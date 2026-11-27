@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Parallelogram Ribbon Theme Switcher for Niri / Wayland.
+GPU-accelerated Parallelogram Ribbon Theme Switcher for Niri / Wayland.
 Inspired by skwd-wall's skewed 16:9 hero carousel:
 - Native Wayland layer-shell overlay (transparent backdrop + exclusive keyboard)
-- 60fps Cairo animation: center preset smoothly expands to 16:9, neighbors compress to slices
-- Infinite wrap-around ribbon so both sides stay balanced even at index 1 or N
-- Dynamic system colors + preview theme accent border and skewed palette swatches
-- Keyboard, scroll, click, live search typing, and type filtering (All / Video / Scenes)
+- 100% GPU-rendered GTK4 GSK Scene Graph (Gtk.Widget.do_snapshot + Gsk.Transform + Gdk.Texture)
+- Exact critically-damped spring physics synced to monitor refresh rate (60–240 Hz)
+- Cached micro-textures for HUD elements (0 Cairo/Pango work during ribbon motion)
+- Dynamic system colors + preview theme accent border/glow & skewed palette swatches
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import math
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # Prefer GL renderer on NVIDIA Wayland to avoid Vulkan swapchain issues in GTK4
@@ -43,9 +44,11 @@ from PIL import Image, ImageOps
 
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
+gi.require_version("Gsk", "4.0")
+gi.require_version("Graphene", "1.0")
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
-from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo  # noqa: E402
+from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk, Pango, PangoCairo  # noqa: E402
 
 try:
     gi.require_version("Gtk4LayerShell", "1.0")
@@ -71,6 +74,34 @@ def hex_rgb(val: str, fallback: str = "#678FE4") -> tuple[float, float, float]:
         )
     except ValueError:
         return hex_rgb(fallback, "#678FE4")
+
+
+def make_rgba(r: float, g: float, b: float, a: float = 1.0) -> Gdk.RGBA:
+    c = Gdk.RGBA()
+    c.red = r
+    c.green = g
+    c.blue = b
+    c.alpha = a
+    return c
+
+
+def make_rect(x: float, y: float, w: float, h: float) -> Graphene.Rect:
+    r = Graphene.Rect()
+    r.init(float(x), float(y), float(w), float(h))
+    return r
+
+
+def make_point(x: float, y: float) -> Graphene.Point:
+    p = Graphene.Point()
+    p.init(float(x), float(y))
+    return p
+
+
+def make_stop(offset: float, rgba: Gdk.RGBA) -> Gsk.ColorStop:
+    s = Gsk.ColorStop()
+    s.offset = float(offset)
+    s.color = rgba
+    return s
 
 
 def clamp(v: float, lo: float, hi: float) -> float:
@@ -113,7 +144,7 @@ def resolve_system_colors(presets: list[dict], current_id: str) -> dict[str, str
             "bg": "#0D1017",
             "surface": "#161B26",
             "fg": "#EDF1F8",
-            "fg_muted": "#92A0B8",
+            "fg_muted": "#9CA8BD",
             "primary": "#678FE4",
             "accent": "#AB66CC",
         }
@@ -145,38 +176,44 @@ def resolve_source_image(preset: dict, store_wp_dir: Path | None) -> Path | None
     return None
 
 
-def load_card_surface(preset: dict, store_wp_dir: Path | None) -> tuple[cairo.ImageSurface, bytearray] | None:
+def load_gpu_card_texture(preset: dict, store_wp_dir: Path | None) -> Gdk.Texture | None:
+    """Load 960x540 cached JPEG straight into a GPU Gdk.Texture (fast path)."""
     pid = preset.get("id", "")
     card_path = CACHE_ROOT / "cards" / f"{pid}.jpg"
-    src_path: Path | None = card_path if card_path.is_file() else None
-    need_cache = False
 
-    if src_path is None:
+    if not card_path.is_file():
         src_path = resolve_source_image(preset, store_wp_dir)
-        need_cache = src_path is not None
-    if src_path is None:
-        return None
+        if src_path is None:
+            return None
+        try:
+            with Image.open(src_path) as im:
+                centering = (0.90, 0.55) if pid == "tame-impala" else (0.5, 0.5)
+                fitted = ImageOps.fit(
+                    im.convert("RGB"), (960, 540), method=Image.Resampling.LANCZOS, centering=centering
+                )
+                card_path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = card_path.with_name(f".{card_path.name}.tmp")
+                fitted.save(tmp, format="JPEG", quality=92)
+                tmp.replace(card_path)
+        except Exception:
+            try:
+                return Gdk.Texture.new_from_filename(str(src_path))
+            except Exception:
+                return None
 
     try:
-        with Image.open(src_path) as im:
-            if need_cache:
-                centering = (0.90, 0.55) if pid == "tame-impala" else (0.5, 0.5)
-                im = ImageOps.fit(im.convert("RGB"), (960, 540), method=Image.Resampling.LANCZOS, centering=centering)
-                try:
-                    card_path.parent.mkdir(parents=True, exist_ok=True)
-                    tmp = card_path.with_name(f".{card_path.name}.tmp")
-                    im.save(tmp, format="JPEG", quality=92)
-                    tmp.replace(card_path)
-                except OSError:
-                    pass
-            rgba = im.convert("RGBA")
-            w, h = rgba.size
-            bgra = bytearray(rgba.tobytes("raw", "BGRA"))
-            stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32, w)
-            surf = cairo.ImageSurface.create_for_data(bgra, cairo.FORMAT_ARGB32, w, h, stride)
-            return surf, bgra
+        return Gdk.Texture.new_from_filename(str(card_path))
     except Exception:
         return None
+
+
+def cairo_to_texture(surface: cairo.ImageSurface) -> Gdk.MemoryTexture:
+    surface.flush()
+    w = surface.get_width()
+    h = surface.get_height()
+    stride = surface.get_stride()
+    gbytes = GLib.Bytes.new(bytes(surface.get_data()))
+    return Gdk.MemoryTexture.new(w, h, Gdk.MemoryFormat.B8G8R8A8_PREMULTIPLIED, gbytes, stride)
 
 
 def rounded_rect_path(ctx: cairo.Context, x: float, y: float, w: float, h: float, r: float) -> None:
@@ -198,16 +235,25 @@ def parallelogram_path(ctx: cairo.Context, x: float, y: float, w: float, h: floa
     ctx.close_path()
 
 
-def draw_pango_text(
+def measure_text(text: str, font_desc: str) -> tuple[int, int]:
+    dummy = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1)
+    ctx = cairo.Context(dummy)
+    layout = PangoCairo.create_layout(ctx)
+    layout.set_font_description(Pango.FontDescription.from_string(font_desc))
+    layout.set_text(text, -1)
+    return layout.get_pixel_size()
+
+
+def draw_text(
     ctx: cairo.Context,
     text: str,
     x: float,
     y: float,
     font_desc: str,
-    color_rgba: tuple[float, float, float, float],
+    rgba: tuple[float, float, float, float],
     align: str = "left",
     max_width: int = -1,
-) -> tuple[float, float]:
+) -> tuple[int, int]:
     layout = PangoCairo.create_layout(ctx)
     layout.set_font_description(Pango.FontDescription.from_string(font_desc))
     layout.set_text(text, -1)
@@ -215,25 +261,13 @@ def draw_pango_text(
         layout.set_width(max_width * Pango.SCALE)
         layout.set_ellipsize(Pango.EllipsizeMode.END)
     w, h = layout.get_pixel_size()
-    draw_x = x
-    if align == "center":
-        draw_x = x - w / 2.0
-    elif align == "right":
-        draw_x = x - w
+    draw_x = x - w * 0.5 if align == "center" else (x - w if align == "right" else x)
     ctx.save()
-    ctx.set_source_rgba(*color_rgba)
+    ctx.set_source_rgba(*rgba)
     ctx.move_to(draw_x, y)
     PangoCairo.show_layout(ctx, layout)
     ctx.restore()
-    return float(w), float(h)
-
-
-def measure_pango_text(ctx: cairo.Context, text: str, font_desc: str) -> tuple[float, float]:
-    layout = PangoCairo.create_layout(ctx)
-    layout.set_font_description(Pango.FontDescription.from_string(font_desc))
-    layout.set_text(text, -1)
-    w, h = layout.get_pixel_size()
-    return float(w), float(h)
+    return w, h
 
 
 def draw_filter_icon(ctx: cairo.Context, kind: str, cx: float, cy: float, size: float, rgba: tuple[float, float, float, float]) -> None:
@@ -256,7 +290,7 @@ def draw_filter_icon(ctx: cairo.Context, kind: str, cx: float, cy: float, size: 
         ctx.line_to(cx - s * 0.28, cy + s * 0.42)
         ctx.close_path()
         ctx.fill()
-    else:  # scene / we
+    else:
         ctx.move_to(cx, cy - s)
         ctx.line_to(cx + s * 0.9, cy)
         ctx.line_to(cx, cy + s)
@@ -268,8 +302,92 @@ def draw_filter_icon(ctx: cairo.Context, kind: str, cx: float, cy: float, size: 
     ctx.restore()
 
 
-class ParallelogramCanvas:
-    """State, infinite carousel geometry, animation, and Cairo renderer."""
+def build_pill_texture(
+    label: str,
+    border_rgb: tuple[float, float, float],
+    fg_rgb: tuple[float, float, float],
+    max_w: int = 560,
+) -> Gdk.MemoryTexture:
+    tw, th = measure_text(label, "Sans Bold 10.5")
+    w = min(max_w, tw + 30)
+    h = th + 14
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w + 4, h + 4)
+    ctx = cairo.Context(surf)
+    rounded_rect_path(ctx, 2, 2, w, h, h * 0.5)
+    ctx.set_source_rgba(0.05, 0.06, 0.10, 0.88)
+    ctx.fill_preserve()
+    ctx.set_line_width(1.2)
+    ctx.set_source_rgba(border_rgb[0], border_rgb[1], border_rgb[2], 0.78)
+    ctx.stroke()
+    draw_text(ctx, label, 2 + w * 0.5, 2 + (h - th) * 0.5, "Sans Bold 10.5", (*fg_rgb, 0.98), align="center", max_width=w - 18)
+    return cairo_to_texture(surf)
+
+
+def build_tag_texture(tag: str, text_rgb: tuple[float, float, float]) -> Gdk.MemoryTexture:
+    tw, th = measure_text(tag, "JetBrains Mono Bold 7.5")
+    w = tw + 12
+    h = th + 6
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w + 2, h + 2)
+    ctx = cairo.Context(surf)
+    rounded_rect_path(ctx, 1, 1, w, h, 4.0)
+    ctx.set_source_rgba(0.04, 0.05, 0.08, 0.86)
+    ctx.fill_preserve()
+    ctx.set_line_width(0.8)
+    ctx.set_source_rgba(1.0, 1.0, 1.0, 0.22)
+    ctx.stroke()
+    draw_text(ctx, tag, 1 + w * 0.5, 1 + (h - th) * 0.5, "JetBrains Mono Bold 7.5", (*text_rgb, 0.95), align="center")
+    return cairo_to_texture(surf)
+
+
+def build_glyph_texture(is_video: bool) -> Gdk.MemoryTexture:
+    size = 22
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+    ctx = cairo.Context(surf)
+    cx = cy = size * 0.5
+    ctx.arc(cx, cy, 8.5, 0.0, 2.0 * math.pi)
+    ctx.set_source_rgba(0.05, 0.07, 0.11, 0.74)
+    ctx.fill_preserve()
+    ctx.set_line_width(1.0)
+    ctx.set_source_rgba(1.0, 1.0, 1.0, 0.42)
+    ctx.stroke()
+    ctx.set_source_rgba(1.0, 1.0, 1.0, 0.88)
+    if is_video:
+        ctx.move_to(cx - 2.3, cy - 3.4)
+        ctx.line_to(cx + 3.6, cy)
+        ctx.line_to(cx - 2.3, cy + 3.4)
+        ctx.close_path()
+        ctx.fill()
+    else:
+        ctx.arc(cx, cy, 2.5, 0.0, 2.0 * math.pi)
+        ctx.fill()
+    return cairo_to_texture(surf)
+
+
+def build_hint_texture(text: str, bg_rgb: tuple[float, float, float], muted_rgb: tuple[float, float, float]) -> Gdk.MemoryTexture:
+    hw, hh = measure_text(text, "Sans 9.5")
+    w = hw + 30
+    h = hh + 10
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w + 2, h + 2)
+    ctx = cairo.Context(surf)
+    rounded_rect_path(ctx, 1, 1, w, h, h * 0.5)
+    ctx.set_source_rgba(bg_rgb[0] * 0.7, bg_rgb[1] * 0.7, bg_rgb[2] * 0.7, 0.68)
+    ctx.fill()
+    draw_text(ctx, text, 1 + w * 0.5, 1 + (h - hh) * 0.5, "Sans 9.5", (*muted_rgb, 0.90), align="center")
+    return cairo_to_texture(surf)
+
+
+def build_empty_texture(text: str, fg_rgb: tuple[float, float, float]) -> Gdk.MemoryTexture:
+    tw, th = measure_text(text, "Sans SemiBold 14")
+    w = tw + 24
+    h = th + 12
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+    ctx = cairo.Context(surf)
+    draw_text(ctx, text, w * 0.5, (h - th) * 0.5, "Sans SemiBold 14", (*fg_rgb, 0.88), align="center")
+    return cairo_to_texture(surf)
+
+
+class ParallelogramView(Gtk.Widget):
+    """100% GPU-rendered GTK4 widget using Gsk.Transform shear + cached textures + spring physics."""
 
     FILTERS = [
         ("all", "Все"),
@@ -278,10 +396,22 @@ class ParallelogramCanvas:
     ]
 
     def __init__(self, presets: list[dict], current_id: str, store_wp_dir: Path | None) -> None:
+        super().__init__()
+        self.set_hexpand(True)
+        self.set_vexpand(True)
+        self.set_focusable(True)
+
         self.all_presets = presets
         self.current_id = current_id
         self.store_wp_dir = store_wp_dir
         self.sys_colors = resolve_system_colors(presets, current_id)
+
+        self.bg_rgb = hex_rgb(self.sys_colors["bg"])
+        self.surf_rgb = hex_rgb(self.sys_colors["surface"])
+        self.fg_rgb = hex_rgb(self.sys_colors["fg"])
+        self.muted_rgb = hex_rgb(self.sys_colors["fg_muted"])
+        self.pri_rgb = hex_rgb(self.sys_colors["primary"])
+        self.acc_rgb = hex_rgb(self.sys_colors["accent"])
 
         self.filter_mode = "all"
         self.search_query = ""
@@ -290,26 +420,54 @@ class ParallelogramCanvas:
         start_idx = next((i for i, p in enumerate(self.filtered) if p.get("id") == current_id), 0)
         self.target_slot = start_idx
         self.anim_pos = float(start_idx)
+        self.anim_vel = 0.0
         self.anim_alpha = 0.0
         self.last_tick_us: int | None = None
+        self.hover_filter: str | None = None
 
-        self.surfaces: dict[str, cairo.ImageSurface] = {}
-        self._buffers: list[bytearray] = []
+        # Preload GPU card textures & tiny HUD label textures ONCE (0 allocations per frame!)
+        self.card_textures: dict[str, Gdk.Texture] = {}
+        self.pill_textures: dict[str, Gdk.MemoryTexture] = {}
+        self.preset_colors: dict[str, tuple[tuple[float, float, float], tuple[float, float, float]]] = {}
         for p in presets:
-            pid = p.get("id")
+            pid = p.get("id", "")
             if not pid:
                 continue
-            loaded = load_card_surface(p, store_wp_dir)
-            if loaded is not None:
-                surf, buf = loaded
-                self.surfaces[pid] = surf
-                self._buffers.append(buf)
+            tex = load_gpu_card_texture(p, store_wp_dir)
+            if tex is not None:
+                self.card_textures[pid] = tex
+            ring = (p.get("niri") or {}).get("focus_ring") or {}
+            c_from = hex_rgb(ring.get("from") or self.sys_colors["primary"])
+            c_to = hex_rgb(ring.get("to") or ring.get("from") or self.sys_colors["accent"])
+            self.preset_colors[pid] = (c_from, c_to)
+            name = p.get("name", pid)
+            label = f"✦  {name}" if pid == current_id else name
+            self.pill_textures[pid] = build_pill_texture(label, c_from, self.fg_rgb)
 
-        # (preset_idx, x, y, w, h, skew) in draw order
-        self.card_hit_polys: list[tuple[int, int, float, float, float, float, float]] = []
+        self.tag_vid = build_tag_texture("VID", (0.90, 0.93, 0.98))
+        self.tag_we = build_tag_texture("WE", (0.90, 0.93, 0.98))
+        self.tag_cur = build_tag_texture("✦", self.pri_rgb)
+        self.glyph_vid = build_glyph_texture(True)
+        self.glyph_we = build_glyph_texture(False)
+        self.hint_tex = build_hint_texture(
+            "← → или колесо: листать   •   Enter: применить   •   Печать: поиск   •   Esc: закрыть",
+            self.bg_rgb,
+            self.muted_rgb,
+        )
+
+        # Cached top capsule texture + relative filter button hitboxes
+        self._capsule_cache_key: tuple | None = None
+        self._capsule_tex: Gdk.MemoryTexture | None = None
+        self._capsule_rel_filters: list[tuple[str, float, float, float, float]] = []
+        self._empty_cache_key: str | None = None
+        self._empty_tex: Gdk.MemoryTexture | None = None
+
+        # Per-frame hit test geometry
+        self.card_hit_polys: list[tuple[int, float, float, float, float, float]] = []
         self.filter_hit_rects: list[tuple[str, float, float, float, float]] = []
         self.capsule_rect: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
-        self.hover_filter: str | None = None
+
+        self.add_tick_callback(self._on_tick)
 
     @property
     def selected_idx(self) -> int:
@@ -335,89 +493,235 @@ class ParallelogramCanvas:
         if not result:
             self.target_slot = 0
             self.anim_pos = 0.0
+            self.anim_vel = 0.0
+            self.queue_draw()
             return
 
         target = keep_id or self.current_id
         new_idx = next((i for i, p in enumerate(result) if p.get("id") == target), 0)
         self.target_slot = new_idx
         self.anim_pos = float(new_idx)
+        self.anim_vel = 0.0
+        self.queue_draw()
 
     def move_selection(self, delta: int) -> None:
         if not self.filtered:
             return
         self.target_slot += delta
+        self.queue_draw()
+
+    def jump_to_slot(self, slot: int) -> None:
+        self.target_slot = slot
+        self.queue_draw()
 
     def step_animation(self, dt: float) -> bool:
-        dt = clamp(dt, 0.001, 0.05)
         moving = False
 
         if self.anim_alpha < 0.999:
-            self.anim_alpha = min(1.0, self.anim_alpha + dt * 7.5)
+            self.anim_alpha = min(1.0, self.anim_alpha + dt * 8.0)
             moving = True
 
-        diff = float(self.target_slot) - self.anim_pos
-        if abs(diff) > 0.002:
-            factor = 1.0 - math.exp(-dt * 15.0)
-            self.anim_pos += diff * factor
+        x0 = self.anim_pos - float(self.target_slot)
+        v0 = self.anim_vel
+        if abs(x0) > 0.0008 or abs(v0) > 0.004:
+            # Exact analytical critically-damped spring: buttery smooth at 60–240 Hz
+            omega = 16.5
+            exp_t = math.exp(-omega * dt)
+            c2 = v0 + omega * x0
+            self.anim_pos = float(self.target_slot) + (x0 + c2 * dt) * exp_t
+            self.anim_vel = (v0 - omega * c2 * dt) * exp_t
             moving = True
         else:
             self.anim_pos = float(self.target_slot)
+            self.anim_vel = 0.0
+
         return moving
 
-    def draw(self, ctx: cairo.Context, width: int, height: int) -> None:
+    def _on_tick(self, _widget: Gtk.Widget, frame_clock: Gdk.FrameClock) -> bool:
+        now_us = frame_clock.get_frame_time()
+        if self.last_tick_us is None:
+            dt = 1.0 / 120.0
+        else:
+            raw_dt = (now_us - self.last_tick_us) / 1_000_000.0
+            # Guard against large first-frame delta after idle pause
+            dt = (1.0 / 120.0) if (raw_dt <= 0.0 or raw_dt > 0.05) else raw_dt
+        self.last_tick_us = now_us
+
+        if self.step_animation(dt):
+            self.queue_draw()
+        return GLib.SOURCE_CONTINUE
+
+    def _ensure_capsule_texture(self, active_preset: dict | None) -> Gdk.MemoryTexture:
+        pid = active_preset.get("id", "") if active_preset else ""
+        key = (self.filter_mode, self.selected_idx, len(self.filtered), self.search_query, self.hover_filter, pid)
+        if key == self._capsule_cache_key and self._capsule_tex is not None:
+            return self._capsule_tex
+
+        cap_h = 40.0
+        pad_x = 12.0
+        btn_h = 28.0
+        btn_w = 28.0
+        btn_gap = 6.0
+
+        swatches = extract_swatches(active_preset) if active_preset else ["#678FE4"] * 6
+        swatch_w = 15.0
+        swatch_h = 15.0
+        swatch_skew = 5.0
+        swatch_gap = 5.0
+        swatches_total_w = len(swatches) * swatch_w + (len(swatches) - 1) * swatch_gap + swatch_skew
+
+        if self.search_query:
+            right_txt = f"⌕ {self.search_query}"
+        elif self.filtered:
+            right_txt = f"{self.selected_idx + 1}/{len(self.filtered)}"
+        else:
+            right_txt = "0/0"
+        right_w, right_h = measure_text(right_txt, "JetBrains Mono SemiBold 10")
+        right_box_w = max(46.0, right_w + 16.0)
+
+        filters_w = len(self.FILTERS) * btn_w + (len(self.FILTERS) - 1) * btn_gap
+        cap_w = int(math.ceil(pad_x + filters_w + 14.0 + 1.0 + 14.0 + swatches_total_w + 14.0 + 1.0 + 12.0 + right_box_w + pad_x))
+        tex_w = cap_w + 4
+        tex_h = int(cap_h) + 4
+
+        surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, tex_w, tex_h)
+        ctx = cairo.Context(surf)
+
+        ox, oy = 2.0, 2.0
+        rounded_rect_path(ctx, ox, oy, cap_w, cap_h, cap_h * 0.5)
+        ctx.set_source_rgba(self.bg_rgb[0] * 0.85, self.bg_rgb[1] * 0.85, self.bg_rgb[2] * 0.85, 0.90)
+        ctx.fill_preserve()
+        ctx.set_line_width(1.2)
+        ctx.set_source_rgba(self.pri_rgb[0], self.pri_rgb[1], self.pri_rgb[2], 0.48)
+        ctx.stroke()
+
+        rel_filters: list[tuple[str, float, float, float, float]] = []
+        cur_x = ox + pad_x
+        btn_y = oy + (cap_h - btn_h) * 0.5
+        for fkey, _label in self.FILTERS:
+            is_active = self.filter_mode == fkey
+            is_hover = self.hover_filter == fkey
+            rel_filters.append((fkey, cur_x, btn_y, btn_w, btn_h))
+            ctx.save()
+            rounded_rect_path(ctx, cur_x, btn_y, btn_w, btn_h, btn_h * 0.5)
+            if is_active:
+                ctx.set_source_rgba(*self.pri_rgb, 0.94)
+                ctx.fill()
+                icon_col = (*self.bg_rgb, 0.98)
+            elif is_hover:
+                ctx.set_source_rgba(*self.surf_rgb, 0.88)
+                ctx.fill()
+                icon_col = (*self.fg_rgb, 0.95)
+            else:
+                ctx.set_source_rgba(*self.surf_rgb, 0.45)
+                ctx.fill()
+                icon_col = (*self.muted_rgb, 0.90)
+            ctx.restore()
+            draw_filter_icon(ctx, fkey, cur_x + btn_w * 0.5, btn_y + btn_h * 0.5, 13.0, icon_col)
+            cur_x += btn_w + btn_gap
+
+        div1_x = cur_x - btn_gap + 12.0
+        ctx.set_source_rgba(*self.muted_rgb, 0.25)
+        ctx.set_line_width(1.0)
+        ctx.move_to(div1_x, oy + 10.0)
+        ctx.line_to(div1_x, oy + cap_h - 10.0)
+        ctx.stroke()
+
+        sx = div1_x + 14.0
+        sy = oy + (cap_h - swatch_h) * 0.5
+        for hex_c in swatches:
+            sr, sg, sb = hex_rgb(hex_c)
+            parallelogram_path(ctx, sx, sy, swatch_w, swatch_h, swatch_skew)
+            ctx.set_source_rgba(sr, sg, sb, 0.96)
+            ctx.fill_preserve()
+            ctx.set_line_width(0.9)
+            ctx.set_source_rgba(1.0, 1.0, 1.0, 0.28)
+            ctx.stroke()
+            sx += swatch_w + swatch_gap
+
+        div2_x = sx - swatch_gap + swatch_skew + 12.0
+        ctx.set_source_rgba(*self.muted_rgb, 0.25)
+        ctx.set_line_width(1.0)
+        ctx.move_to(div2_x, oy + 10.0)
+        ctx.line_to(div2_x, oy + cap_h - 10.0)
+        ctx.stroke()
+
+        txt_col = (*self.pri_rgb, 0.98) if self.search_query else (*self.fg_rgb, 0.90)
+        draw_text(
+            ctx,
+            right_txt,
+            ox + cap_w - pad_x - 4.0,
+            oy + (cap_h - right_h) * 0.5,
+            "JetBrains Mono SemiBold 10",
+            txt_col,
+            align="right",
+        )
+
+        self._capsule_cache_key = key
+        self._capsule_tex = cairo_to_texture(surf)
+        self._capsule_rel_filters = rel_filters
+        return self._capsule_tex
+
+    def render_snapshot(self, snapshot: Gtk.Snapshot, width: int, height: int) -> None:
         self.card_hit_polys.clear()
         self.filter_hit_rects.clear()
 
-        fade = smoothstep(self.anim_alpha)
-        bg_r, bg_g, bg_b = hex_rgb(self.sys_colors["bg"])
-        surf_r, surf_g, surf_b = hex_rgb(self.sys_colors["surface"])
-        fg_r, fg_g, fg_b = hex_rgb(self.sys_colors["fg"])
-        muted_r, muted_g, muted_b = hex_rgb(self.sys_colors["fg_muted"])
-        pri_r, pri_g, pri_b = hex_rgb(self.sys_colors["primary"])
-        acc_r, acc_g, acc_b = hex_rgb(self.sys_colors["accent"])
+        if width <= 0 or height <= 0:
+            return
 
-        # Subtle vignette so cards pop over bright or busy wallpapers while edges stay visible
-        ctx.save()
-        vignette = cairo.RadialGradient(
-            width * 0.5, height * 0.5, min(width, height) * 0.12,
-            width * 0.5, height * 0.5, max(width, height) * 0.72,
+        fade = smoothstep(self.anim_alpha)
+        full_rect = make_rect(0.0, 0.0, width, height)
+
+        # 1. Subtle GPU radial vignette backdrop
+        stop_inner = make_stop(0.0, make_rgba(self.bg_rgb[0] * 0.45, self.bg_rgb[1] * 0.45, self.bg_rgb[2] * 0.45, 0.44 * fade))
+        stop_outer = make_stop(1.0, make_rgba(0.02, 0.03, 0.05, 0.62 * fade))
+        snapshot.append_radial_gradient(
+            full_rect,
+            make_point(width * 0.5, height * 0.5),
+            width * 0.65,
+            height * 0.65,
+            0.12,
+            1.0,
+            [stop_inner, stop_outer],
         )
-        vignette.add_color_stop_rgba(0.0, bg_r * 0.45, bg_g * 0.45, bg_b * 0.45, 0.46 * fade)
-        vignette.add_color_stop_rgba(1.0, 0.02, 0.03, 0.05, 0.62 * fade)
-        ctx.set_source(vignette)
-        ctx.paint()
-        ctx.restore()
 
         card_h = clamp(height * 0.40, 300.0, 460.0)
         hero_w = min(card_h * (16.0 / 9.0), width * 0.54)
         slice_w = clamp(card_h * 0.145, 48.0, 68.0)
         skew = round(card_h * 0.068)
         gap = 10.0
-
         ribbon_y = (height - card_h) * 0.52
 
         n = len(self.filtered)
         active_preset = self.filtered[self.selected_idx] if n > 0 else None
 
-        # 1. Compact floating capsule bar above ribbon
-        self._draw_top_capsule(
-            ctx, width, ribbon_y, active_preset, fade,
-            (bg_r, bg_g, bg_b), (surf_r, surf_g, surf_b),
-            (fg_r, fg_g, fg_b), (muted_r, muted_g, muted_b),
-            (pri_r, pri_g, pri_b),
-        )
+        # 2. Cached top capsule GPU texture
+        cap_tex = self._ensure_capsule_texture(active_preset)
+        cw = float(cap_tex.get_width())
+        ch = float(cap_tex.get_height())
+        cap_x = (width - cw) * 0.5
+        cap_y = ribbon_y - ch - 16.0
+        self.capsule_rect = (cap_x, cap_y, cw, ch)
+        for fkey, rx, ry, rw, rh in self._capsule_rel_filters:
+            self.filter_hit_rects.append((fkey, cap_x + rx, cap_y + ry, rw, rh))
 
-        # 2. Empty state when search/filter matches nothing
+        if fade < 0.999:
+            snapshot.push_opacity(fade)
+        snapshot.append_texture(cap_tex, make_rect(cap_x, cap_y, cw, ch))
+        if fade < 0.999:
+            snapshot.pop()
+
+        # 3. Empty state
         if n == 0:
             msg = f"Нет тем по запросу «{self.search_query}»" if self.search_query else "В этом фильтре нет тем"
-            draw_pango_text(
-                ctx, msg, width * 0.5, ribbon_y + card_h * 0.46,
-                "Sans SemiBold 14", (fg_r, fg_g, fg_b, 0.85 * fade), align="center",
-            )
+            if msg != self._empty_cache_key or self._empty_tex is None:
+                self._empty_cache_key = msg
+                self._empty_tex = build_empty_texture(msg, self.fg_rgb)
+            ew, eh = float(self._empty_tex.get_width()), float(self._empty_tex.get_height())
+            snapshot.append_texture(self._empty_tex, make_rect((width - ew) * 0.5, ribbon_y + (card_h - eh) * 0.5, ew, eh))
             return
 
-        # 3. Infinite cyclic ribbon (or single card if n == 1):
-        # 5 balanced slices per side in rest state, plus 6th fading in/out smoothly during motion
+        # 4. Compute exact infinite cyclic ribbon layout
         anchor_slot = int(round(self.anim_pos))
         slots = [0] if n == 1 else list(range(anchor_slot - 6, anchor_slot + 7))
 
@@ -452,330 +756,140 @@ class ParallelogramCanvas:
 
         x_shift = (width * 0.5) - focal_center - skew * 0.5
 
-        # Draw side slices first, hero card last so glow/border draws on top
         draw_order = sorted(range(len(slots)), key=lambda i: weights[i])
         for i in draw_order:
-            if edge_fades[i] <= 0.01:
+            ef = edge_fades[i]
+            if ef <= 0.01:
                 continue
             s = slots[i]
             x = lefts[i] + x_shift
             w = widths[i]
-            if x + w + skew < -40 or x > width + 40:
+            if x + w + skew < -40.0 or x > width + 40.0:
                 continue
+
             preset_idx = s % n
-            self._draw_card(
-                ctx, s, preset_idx, self.filtered[preset_idx],
-                x, ribbon_y, w, card_h, hero_w, skew,
-                weights[i], fade * edge_fades[i], (bg_r, bg_g, bg_b), (fg_r, fg_g, fg_b),
-            )
+            preset = self.filtered[preset_idx]
+            pid = preset.get("id", "")
+            wtype = (preset.get("wallpaper") or {}).get("type", "image").lower()
+            is_current = pid == self.current_id
+            w_focus = weights[i]
+            card_alpha = fade * ef
 
-        # 4. Crisp bottom helper pill under ribbon
-        hint = "← → или колесо: листать   •   Enter: применить   •   Печать: поиск   •   Esc: закрыть"
-        hw, hh = measure_pango_text(ctx, hint, "Sans 9.5")
-        hy = ribbon_y + card_h + 18.0
-        ctx.save()
-        rounded_rect_path(ctx, width * 0.5 - hw * 0.5 - 14.0, hy - 4.0, hw + 28.0, hh + 8.0, (hh + 8.0) * 0.5)
-        ctx.set_source_rgba(bg_r * 0.7, bg_g * 0.7, bg_b * 0.7, 0.65 * fade)
-        ctx.fill()
-        ctx.restore()
-        draw_pango_text(
-            ctx, hint, width * 0.5, hy,
-            "Sans 9.5", (muted_r, muted_g, muted_b, 0.88 * fade), align="center",
-        )
+            self.card_hit_polys.append((s, x, ribbon_y, w, card_h, float(skew)))
 
-    def _draw_top_capsule(
-        self,
-        ctx: cairo.Context,
-        screen_w: int,
-        ribbon_y: float,
-        active_preset: dict | None,
-        fade: float,
-        bg_rgb: tuple[float, float, float],
-        surf_rgb: tuple[float, float, float],
-        fg_rgb: tuple[float, float, float],
-        muted_rgb: tuple[float, float, float],
-        pri_rgb: tuple[float, float, float],
-    ) -> None:
-        cap_h = 40.0
-        pad_x = 12.0
-        btn_h = 28.0
-        btn_w = 28.0
-        btn_gap = 6.0
+            c_from_rgb, c_to_rgb = self.preset_colors.get(pid, (self.pri_rgb, self.acc_rgb))
+            bbox = make_rect(x - 6.0, ribbon_y - 6.0, w + skew + 12.0, card_h + 12.0)
 
-        swatches = extract_swatches(active_preset) if active_preset else ["#678FE4"] * 6
-        swatch_w = 15.0
-        swatch_h = 15.0
-        swatch_skew = 5.0
-        swatch_gap = 5.0
-        swatches_total_w = len(swatches) * swatch_w + (len(swatches) - 1) * swatch_gap + swatch_skew
+            pb = Gsk.PathBuilder()
+            pb.move_to(float(x + skew), float(ribbon_y))
+            pb.line_to(float(x + skew + w), float(ribbon_y))
+            pb.line_to(float(x + w), float(ribbon_y + card_h))
+            pb.line_to(float(x), float(ribbon_y + card_h))
+            pb.close()
+            path = pb.to_path()
 
-        if self.search_query:
-            right_txt = f"⌕ {self.search_query}"
-        elif self.filtered:
-            right_txt = f"{self.selected_idx + 1}/{len(self.filtered)}"
-        else:
-            right_txt = "0/0"
-        right_w, right_h = measure_pango_text(ctx, right_txt, "JetBrains Mono SemiBold 10")
-        right_box_w = max(46.0, right_w + 16.0)
+            pushed_alpha = card_alpha < 0.999
+            if pushed_alpha:
+                snapshot.push_opacity(card_alpha)
 
-        filters_w = len(self.FILTERS) * btn_w + (len(self.FILTERS) - 1) * btn_gap
-        cap_w = pad_x + filters_w + 14.0 + 1.0 + 14.0 + swatches_total_w + 14.0 + 1.0 + 12.0 + right_box_w + pad_x
-        cap_x = (screen_w - cap_w) * 0.5
-        cap_y = ribbon_y - cap_h - 18.0
+            # Soft outer glow around hero parallelogram
+            if w_focus > 0.25:
+                snapshot.append_stroke(
+                    path,
+                    Gsk.Stroke.new(7.0),
+                    make_rgba(c_from_rgb[0], c_from_rgb[1], c_from_rgb[2], 0.26 * w_focus),
+                )
 
-        self.capsule_rect = (cap_x, cap_y, cap_w, cap_h)
+            # Native GTK4 GPU path fill mask: upright wallpaper clipped to crisp anti-aliased parallelogram
+            snapshot.push_fill(path, Gsk.FillRule.WINDING)
 
-        # Capsule body
-        ctx.save()
-        rounded_rect_path(ctx, cap_x, cap_y, cap_w, cap_h, cap_h * 0.5)
-        ctx.set_source_rgba(bg_rgb[0] * 0.85, bg_rgb[1] * 0.85, bg_rgb[2] * 0.85, 0.90 * fade)
-        ctx.fill_preserve()
-        ctx.set_line_width(1.2)
-        ctx.set_source_rgba(pri_rgb[0], pri_rgb[1], pri_rgb[2], 0.45 * fade)
-        ctx.stroke()
-        ctx.restore()
-
-        # Filter icon buttons
-        cur_x = cap_x + pad_x
-        btn_y = cap_y + (cap_h - btn_h) * 0.5
-        for key, _label in self.FILTERS:
-            is_active = self.filter_mode == key
-            is_hover = self.hover_filter == key
-            self.filter_hit_rects.append((key, cur_x, btn_y, btn_w, btn_h))
-
-            ctx.save()
-            rounded_rect_path(ctx, cur_x, btn_y, btn_w, btn_h, btn_h * 0.5)
-            if is_active:
-                ctx.set_source_rgba(pri_rgb[0], pri_rgb[1], pri_rgb[2], 0.92 * fade)
-                ctx.fill()
-                icon_col = (bg_rgb[0], bg_rgb[1], bg_rgb[2], 0.98 * fade)
-            elif is_hover:
-                ctx.set_source_rgba(surf_rgb[0], surf_rgb[1], surf_rgb[2], 0.85 * fade)
-                ctx.fill()
-                icon_col = (*fg_rgb, 0.95 * fade)
+            tex = self.card_textures.get(pid)
+            if tex is not None:
+                iw = float(tex.get_width())
+                ih = float(tex.get_height())
+                span_w = hero_w + skew
+                scale = max(span_w / iw, card_h / ih)
+                draw_w = iw * scale
+                draw_h = ih * scale
+                card_cx = x + (w + skew) * 0.5
+                card_cy = ribbon_y + card_h * 0.5
+                snapshot.append_scaled_texture(
+                    tex,
+                    Gsk.ScalingFilter.LINEAR,
+                    make_rect(card_cx - draw_w * 0.5, card_cy - draw_h * 0.5, draw_w, draw_h),
+                )
             else:
-                ctx.set_source_rgba(surf_rgb[0], surf_rgb[1], surf_rgb[2], 0.45 * fade)
-                ctx.fill()
-                icon_col = (*muted_rgb, 0.90 * fade)
-            ctx.restore()
+                g1 = make_stop(0.0, make_rgba(c_from_rgb[0] * 0.35, c_from_rgb[1] * 0.35, c_from_rgb[2] * 0.35, 1.0))
+                g2 = make_stop(1.0, make_rgba(*self.bg_rgb, 1.0))
+                snapshot.append_linear_gradient(
+                    bbox, make_point(x, ribbon_y), make_point(x + w + skew, ribbon_y + card_h), [g1, g2]
+                )
 
-            draw_filter_icon(ctx, key, cur_x + btn_w * 0.5, btn_y + btn_h * 0.5, 13.0, icon_col)
-            cur_x += btn_w + btn_gap
+            if w_focus < 0.96:
+                snapshot.append_color(make_rgba(0.03, 0.04, 0.07, (1.0 - w_focus) * 0.34), bbox)
 
-        # Divider 1
-        div1_x = cur_x - btn_gap + 12.0
-        ctx.save()
-        ctx.set_source_rgba(*muted_rgb, 0.25 * fade)
-        ctx.set_line_width(1.0)
-        ctx.move_to(div1_x, cap_y + 10.0)
-        ctx.line_to(div1_x, cap_y + cap_h - 10.0)
-        ctx.stroke()
-        ctx.restore()
+            snapshot.pop()  # end push_fill
 
-        # Skewed theme color swatches (parallelograms)
-        sx = div1_x + 14.0
-        sy = cap_y + (cap_h - swatch_h) * 0.5
-        for hex_c in swatches:
-            sr, sg, sb = hex_rgb(hex_c)
-            ctx.save()
-            parallelogram_path(ctx, sx, sy, swatch_w, swatch_h, swatch_skew)
-            ctx.set_source_rgba(sr, sg, sb, 0.96 * fade)
-            ctx.fill_preserve()
-            ctx.set_line_width(0.9)
-            ctx.set_source_rgba(1.0, 1.0, 1.0, 0.28 * fade)
-            ctx.stroke()
-            ctx.restore()
-            sx += swatch_w + swatch_gap
-
-        # Divider 2
-        div2_x = sx - swatch_gap + swatch_skew + 12.0
-        ctx.save()
-        ctx.set_source_rgba(*muted_rgb, 0.25 * fade)
-        ctx.set_line_width(1.0)
-        ctx.move_to(div2_x, cap_y + 10.0)
-        ctx.line_to(div2_x, cap_y + cap_h - 10.0)
-        ctx.stroke()
-        ctx.restore()
-
-        # Counter / Search query text
-        txt_col = (*pri_rgb, 0.98 * fade) if self.search_query else (*fg_rgb, 0.88 * fade)
-        draw_pango_text(
-            ctx,
-            right_txt,
-            cap_x + cap_w - pad_x - 4.0,
-            cap_y + (cap_h - right_h) * 0.5,
-            "JetBrains Mono SemiBold 10",
-            txt_col,
-            align="right",
-        )
-
-    def _draw_card(
-        self,
-        ctx: cairo.Context,
-        slot: int,
-        preset_idx: int,
-        preset: dict,
-        x: float,
-        y: float,
-        w: float,
-        h: float,
-        hero_w: float,
-        skew: float,
-        w_focus: float,
-        fade: float,
-        bg_rgb: tuple[float, float, float],
-        fg_rgb: tuple[float, float, float],
-    ) -> None:
-        self.card_hit_polys.append((slot, preset_idx, x, y, w, h, skew))
-
-        pid = preset.get("id", "")
-        name = preset.get("name", pid)
-        wtype = (preset.get("wallpaper") or {}).get("type", "image").lower()
-        is_current = pid == self.current_id
-
-        ring = ((preset.get("niri") or {}).get("focus_ring") or {})
-        c_from = hex_rgb(ring.get("from") or self.sys_colors["primary"])
-        c_to = hex_rgb(ring.get("to") or ring.get("from") or self.sys_colors["accent"])
-
-        # Hero outer glow
-        if w_focus > 0.25:
-            ctx.save()
-            parallelogram_path(ctx, x - 2.0, y - 2.0, w + 4.0, h + 4.0, skew)
-            ctx.set_line_width(6.0)
-            ctx.set_source_rgba(c_from[0], c_from[1], c_from[2], 0.24 * w_focus * fade)
-            ctx.stroke()
-            ctx.restore()
-
-        # Clip to parallelogram & draw wallpaper centered relative to the card's middle
-        ctx.save()
-        parallelogram_path(ctx, x, y, w, h, skew)
-        ctx.clip()
-
-        surf = self.surfaces.get(pid)
-        if surf is not None:
-            iw = surf.get_width()
-            ih = surf.get_height()
-            span_w = hero_w + skew
-            scale = max(span_w / iw, h / ih)
-            draw_w = iw * scale
-            draw_h = ih * scale
-            card_cx = x + (w + skew) * 0.5
-            card_cy = y + h * 0.5
-            ctx.save()
-            ctx.translate(card_cx - draw_w * 0.5, card_cy - draw_h * 0.5)
-            ctx.scale(scale, scale)
-            ctx.set_source_surface(surf, 0, 0)
-            ctx.get_source().set_filter(cairo.FILTER_BILINEAR)
-            ctx.paint_with_alpha(fade)
-            ctx.restore()
-        else:
-            grad = cairo.LinearGradient(x, y, x + w + skew, y + h)
-            grad.add_color_stop_rgba(0.0, c_from[0] * 0.35, c_from[1] * 0.35, c_from[2] * 0.35, fade)
-            grad.add_color_stop_rgba(1.0, bg_rgb[0], bg_rgb[1], bg_rgb[2], fade)
-            ctx.set_source(grad)
-            ctx.paint()
-
-        # Dim non-focused slices so the expanded 16:9 card stands out clearly
-        if w_focus < 0.95:
-            dim_alpha = (1.0 - w_focus) * 0.34 * fade
-            ctx.set_source_rgba(0.03, 0.04, 0.07, dim_alpha)
-            ctx.paint()
-
-        # Subtle top-right circular play/type glyph on collapsed slices
-        if w_focus < 0.45 and w >= 38.0:
-            bx = x + skew + w - 16.0
-            by = y + 16.0
-            ctx.save()
-            ctx.arc(bx, by, 8.5, 0.0, 2.0 * math.pi)
-            ctx.set_source_rgba(0.05, 0.07, 0.11, 0.72 * (1.0 - w_focus) * fade)
-            ctx.fill()
-            ctx.set_line_width(1.0)
-            ctx.set_source_rgba(1.0, 1.0, 1.0, 0.40 * (1.0 - w_focus) * fade)
-            ctx.arc(bx, by, 8.5, 0.0, 2.0 * math.pi)
-            ctx.stroke()
-            ctx.set_source_rgba(1.0, 1.0, 1.0, 0.85 * (1.0 - w_focus) * fade)
-            if wtype == "video":
-                ctx.move_to(bx - 2.3, by - 3.4)
-                ctx.line_to(bx + 3.6, by)
-                ctx.line_to(bx - 2.3, by + 3.4)
-                ctx.close_path()
-                ctx.fill()
+            # Crisp GPU parallelogram border (linear accent gradient on hero, clean rim on slices)
+            if w_focus > 0.45:
+                bw = 1.3 + 1.2 * w_focus
+                snapshot.push_stroke(path, Gsk.Stroke.new(bw))
+                st1 = make_stop(0.0, make_rgba(*c_from_rgb, 0.96 * w_focus))
+                st2 = make_stop(1.0, make_rgba(*c_to_rgb, 0.96 * w_focus))
+                snapshot.append_linear_gradient(
+                    bbox,
+                    make_point(x, ribbon_y),
+                    make_point(x + w + skew, ribbon_y + card_h),
+                    [st1, st2],
+                )
+                snapshot.pop()
             else:
-                ctx.arc(bx, by, 2.5, 0.0, 2.0 * math.pi)
-                ctx.fill()
-            ctx.restore()
+                if is_current:
+                    snapshot.append_stroke(path, Gsk.Stroke.new(1.5), make_rgba(*c_from_rgb, 0.78))
+                else:
+                    snapshot.append_stroke(path, Gsk.Stroke.new(1.0), make_rgba(1.0, 1.0, 1.0, 0.20))
 
-        # Bottom mini type tag (VID / WE)
-        tag = "VID" if wtype == "video" else "WE"
-        if is_current and w_focus < 0.55:
-            tag = "✦"
-        tag_alpha = fade * (0.90 if w_focus > 0.6 else 0.78)
-        tag_w, tag_h = measure_pango_text(ctx, tag, "JetBrains Mono Bold 7.5")
-        tx = x + w - tag_w - 14.0
-        ty = y + h - tag_h - 10.0
-        ctx.save()
-        rounded_rect_path(ctx, tx - 4.5, ty - 2.0, tag_w + 9.0, tag_h + 4.0, 4.0)
-        ctx.set_source_rgba(0.04, 0.05, 0.08, 0.86 * tag_alpha)
-        ctx.fill_preserve()
-        ctx.set_line_width(0.8)
-        ctx.set_source_rgba(1.0, 1.0, 1.0, 0.18 * tag_alpha)
-        ctx.stroke()
-        ctx.restore()
-        draw_pango_text(
-            ctx, tag, tx, ty, "JetBrains Mono Bold 7.5",
-            (c_from[0], c_from[1], c_from[2], tag_alpha) if is_current else (0.90, 0.93, 0.98, tag_alpha),
-        )
+            # Upright cached micro-textures (zero text re-layout on scroll!)
+            if w_focus < 0.45 and w >= 38.0:
+                gtex = self.glyph_vid if wtype == "video" else self.glyph_we
+                gw, gh = float(gtex.get_width()), float(gtex.get_height())
+                snapshot.push_opacity(1.0 - w_focus)
+                snapshot.append_texture(gtex, make_rect(x + skew + w - gw - 6.0, ribbon_y + 6.0, gw, gh))
+                snapshot.pop()
 
-        # Hero center title pill at bottom
-        if w_focus > 0.55:
-            pill_alpha = clamp((w_focus - 0.55) / 0.45, 0.0, 1.0) * fade
-            label_text = f"✦  {name}" if is_current else name
-            tw, th = measure_pango_text(ctx, label_text, "Sans Bold 10.5")
-            pill_w = min(w - 60.0, tw + 28.0)
-            pill_h = th + 12.0
-            pill_x = x + w * 0.5 - pill_w * 0.5
-            pill_y = y + h - pill_h - 14.0
+            tag_tex = self.tag_cur if (is_current and w_focus < 0.55) else (self.tag_vid if wtype == "video" else self.tag_we)
+            tw, th = float(tag_tex.get_width()), float(tag_tex.get_height())
+            snapshot.append_texture(tag_tex, make_rect(x + w - tw - 10.0, ribbon_y + card_h - th - 8.0, tw, th))
 
-            ctx.save()
-            rounded_rect_path(ctx, pill_x, pill_y, pill_w, pill_h, pill_h * 0.5)
-            ctx.set_source_rgba(0.05, 0.06, 0.10, 0.86 * pill_alpha)
-            ctx.fill_preserve()
-            ctx.set_line_width(1.1)
-            ctx.set_source_rgba(c_from[0], c_from[1], c_from[2], 0.72 * pill_alpha)
-            ctx.stroke()
-            ctx.restore()
+            if w_focus > 0.55:
+                pill_tex = self.pill_textures.get(pid)
+                if pill_tex is not None:
+                    pill_alpha = clamp((w_focus - 0.55) / 0.45, 0.0, 1.0)
+                    pw, ph = float(pill_tex.get_width()), float(pill_tex.get_height())
+                    px = x + w * 0.5 - pw * 0.5
+                    py = ribbon_y + card_h - ph - 12.0
+                    snapshot.push_opacity(pill_alpha)
+                    snapshot.append_texture(pill_tex, make_rect(px, py, pw, ph))
+                    snapshot.pop()
 
-            draw_pango_text(
-                ctx, label_text, pill_x + pill_w * 0.5, pill_y + (pill_h - th) * 0.5,
-                "Sans Bold 10.5", (*fg_rgb, 0.98 * pill_alpha),
-                align="center", max_width=int(pill_w - 16),
-            )
+            if pushed_alpha:
+                snapshot.pop()
 
-        ctx.restore()  # remove parallelogram clip
+        # 5. Cached bottom helper hint
+        hw, hh = float(self.hint_tex.get_width()), float(self.hint_tex.get_height())
+        if fade < 0.999:
+            snapshot.push_opacity(fade)
+        snapshot.append_texture(self.hint_tex, make_rect((width - hw) * 0.5, ribbon_y + card_h + 15.0, hw, hh))
+        if fade < 0.999:
+            snapshot.pop()
 
-        # Crisp card border
-        ctx.save()
-        parallelogram_path(ctx, x, y, w, h, skew)
-        if w_focus > 0.45:
-            border_grad = cairo.LinearGradient(x, y, x + w + skew, y + h)
-            border_grad.add_color_stop_rgba(0.0, c_from[0], c_from[1], c_from[2], 0.96 * w_focus * fade)
-            border_grad.add_color_stop_rgba(1.0, c_to[0], c_to[1], c_to[2], 0.96 * w_focus * fade)
-            ctx.set_source(border_grad)
-            ctx.set_line_width(1.2 + 1.2 * w_focus)
-        else:
-            if is_current:
-                ctx.set_source_rgba(c_from[0], c_from[1], c_from[2], 0.72 * fade)
-                ctx.set_line_width(1.4)
-            else:
-                ctx.set_source_rgba(1.0, 1.0, 1.0, 0.18 * fade)
-                ctx.set_line_width(1.0)
-        ctx.stroke()
-        ctx.restore()
+    def do_snapshot(self, snapshot: Gtk.Snapshot) -> None:
+        self.render_snapshot(snapshot, self.get_width(), self.get_height())
 
     def hit_test_filter(self, px: float, py: float) -> str | None:
-        for key, rx, ry, rw, rh in self.filter_hit_rects:
+        for fkey, rx, ry, rw, rh in self.filter_hit_rects:
             if rx <= px <= rx + rw and ry <= py <= ry + rh:
-                return key
+                return fkey
         return None
 
     def point_in_capsule(self, px: float, py: float) -> bool:
@@ -783,14 +897,12 @@ class ParallelogramCanvas:
         return cx <= px <= cx + cw and cy <= py <= cy + ch
 
     def hit_test_card(self, px: float, py: float) -> int | None:
-        # Iterate reversed draw order so the expanded hero card catches overlaps first
-        for slot, _preset_idx, x, y, w, h, skew in reversed(self.card_hit_polys):
+        for slot, x, y, w, h, skew in reversed(self.card_hit_polys):
             if py < y or py > y + h:
                 continue
-            t = (y + h - py) / h  # 0 at bottom, 1 at top
+            t = (y + h - py) / h
             left_edge = x + skew * t
-            right_edge = left_edge + w
-            if left_edge <= px <= right_edge:
+            if left_edge <= px <= left_edge + w:
                 return slot
         return None
 
@@ -826,9 +938,9 @@ def apply_theme(preset_id: str) -> None:
 
 
 class ParallelogramWindow(Gtk.ApplicationWindow):
-    def __init__(self, app: Gtk.Application, canvas: ParallelogramCanvas) -> None:
+    def __init__(self, app: Gtk.Application, view: ParallelogramView) -> None:
         super().__init__(application=app, title="Theme Parallelogram Switcher")
-        self.canvas = canvas
+        self.view = view
 
         self.set_decorated(False)
         self.add_css_class("parallelogram-overlay")
@@ -849,12 +961,7 @@ class ParallelogramWindow(Gtk.ApplicationWindow):
         else:
             self.set_default_size(1440, 720)
 
-        self.area = Gtk.DrawingArea()
-        self.area.set_hexpand(True)
-        self.area.set_vexpand(True)
-        self.area.set_focusable(True)
-        self.area.set_draw_func(self._on_draw)
-        self.set_child(self.area)
+        self.set_child(self.view)
 
         key_ctrl = Gtk.EventControllerKey()
         key_ctrl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
@@ -865,32 +972,19 @@ class ParallelogramWindow(Gtk.ApplicationWindow):
             Gtk.EventControllerScrollFlags.BOTH_AXES | Gtk.EventControllerScrollFlags.DISCRETE
         )
         scroll_ctrl.connect("scroll", self._on_scroll)
-        self.area.add_controller(scroll_ctrl)
+        self.view.add_controller(scroll_ctrl)
 
         motion_ctrl = Gtk.EventControllerMotion()
         motion_ctrl.connect("motion", self._on_motion)
-        self.area.add_controller(motion_ctrl)
+        self.view.add_controller(motion_ctrl)
 
         click_ctrl = Gtk.GestureClick.new()
         click_ctrl.connect("pressed", self._on_click)
-        self.area.add_controller(click_ctrl)
-
-        self.area.add_tick_callback(self._on_tick)
-
-    def _on_tick(self, widget: Gtk.Widget, frame_clock: Gdk.FrameClock) -> bool:
-        now_us = frame_clock.get_frame_time()
-        dt = 0.016 if self.canvas.last_tick_us is None else (now_us - self.canvas.last_tick_us) / 1_000_000.0
-        self.canvas.last_tick_us = now_us
-        if self.canvas.step_animation(dt):
-            widget.queue_draw()
-        return GLib.SOURCE_CONTINUE
-
-    def _on_draw(self, _area: Gtk.DrawingArea, ctx: cairo.Context, width: int, height: int) -> None:
-        self.canvas.draw(ctx, width, height)
+        self.view.add_controller(click_ctrl)
 
     def _commit_selected(self) -> None:
-        if 0 <= self.canvas.selected_idx < len(self.canvas.filtered):
-            pid = self.canvas.filtered[self.canvas.selected_idx].get("id", "")
+        if 0 <= self.view.selected_idx < len(self.view.filtered):
+            pid = self.view.filtered[self.view.selected_idx].get("id", "")
             self.close()
             apply_theme(pid)
 
@@ -898,75 +992,61 @@ class ParallelogramWindow(Gtk.ApplicationWindow):
         self, _ctrl: Gtk.EventControllerKey, keyval: int, _keycode: int, state: Gdk.ModifierType
     ) -> bool:
         if keyval == Gdk.KEY_Escape:
-            if self.canvas.search_query:
-                self.canvas.search_query = ""
-                self.canvas.apply_filter()
-                self.area.queue_draw()
+            if self.view.search_query:
+                self.view.search_query = ""
+                self.view.apply_filter()
                 return True
             self.close()
             return True
 
         if keyval in (Gdk.KEY_Left, Gdk.KEY_Up):
-            self.canvas.move_selection(-1)
-            self.area.queue_draw()
+            self.view.move_selection(-1)
             return True
 
         if keyval in (Gdk.KEY_Right, Gdk.KEY_Down):
-            self.canvas.move_selection(1)
-            self.area.queue_draw()
+            self.view.move_selection(1)
             return True
 
         if keyval == Gdk.KEY_Tab:
-            keys = [k for k, _ in self.canvas.FILTERS]
-            cur_i = keys.index(self.canvas.filter_mode)
-            cur_id = (
-                self.canvas.filtered[self.canvas.selected_idx].get("id")
-                if self.canvas.filtered
-                else None
-            )
-            self.canvas.filter_mode = keys[(cur_i + 1) % len(keys)]
-            self.canvas.apply_filter(keep_id=cur_id)
-            self.area.queue_draw()
+            keys = [k for k, _ in self.view.FILTERS]
+            cur_i = keys.index(self.view.filter_mode)
+            cur_id = self.view.filtered[self.view.selected_idx].get("id") if self.view.filtered else None
+            self.view.filter_mode = keys[(cur_i + 1) % len(keys)]
+            self.view.apply_filter(keep_id=cur_id)
             return True
 
         if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
             self._commit_selected()
             return True
 
-        if keyval == Gdk.KEY_Home and self.canvas.filtered:
-            self.canvas.target_slot = 0
-            self.area.queue_draw()
+        if keyval == Gdk.KEY_Home and self.view.filtered:
+            self.view.jump_to_slot(0)
             return True
 
-        if keyval == Gdk.KEY_End and self.canvas.filtered:
-            self.canvas.target_slot = len(self.canvas.filtered) - 1
-            self.area.queue_draw()
+        if keyval == Gdk.KEY_End and self.view.filtered:
+            self.view.jump_to_slot(len(self.view.filtered) - 1)
             return True
 
         if keyval == Gdk.KEY_BackSpace:
-            if self.canvas.search_query:
-                self.canvas.search_query = self.canvas.search_query[:-1]
-                self.canvas.apply_filter()
-                self.area.queue_draw()
+            if self.view.search_query:
+                self.view.search_query = self.view.search_query[:-1]
+                self.view.apply_filter()
             return True
 
-        if not self.canvas.search_query and not (state & Gdk.ModifierType.CONTROL_MASK):
+        if not self.view.search_query and not (state & Gdk.ModifierType.CONTROL_MASK):
             if keyval in (Gdk.KEY_h, Gdk.KEY_H):
-                self.canvas.move_selection(-1)
-                self.area.queue_draw()
+                self.view.move_selection(-1)
                 return True
             if keyval in (Gdk.KEY_l, Gdk.KEY_L):
-                self.canvas.move_selection(1)
-                self.area.queue_draw()
+                self.view.move_selection(1)
                 return True
 
         uni = Gdk.keyval_to_unicode(keyval)
         if uni and uni >= 32 and not (state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)):
             ch = chr(uni)
             if ch.isalnum() or ch in (" ", "-", "_"):
-                self.canvas.search_query += ch
-                self.canvas.apply_filter()
-                self.area.queue_draw()
+                self.view.search_query += ch
+                self.view.apply_filter()
                 return True
 
         return False
@@ -974,106 +1054,90 @@ class ParallelogramWindow(Gtk.ApplicationWindow):
     def _on_scroll(self, _ctrl: Gtk.EventControllerScroll, dx: float, dy: float) -> bool:
         delta = dy if abs(dy) >= abs(dx) else dx
         if delta > 0:
-            self.canvas.move_selection(1)
-            self.area.queue_draw()
+            self.view.move_selection(1)
         elif delta < 0:
-            self.canvas.move_selection(-1)
-            self.area.queue_draw()
+            self.view.move_selection(-1)
         return True
 
     def _on_motion(self, _ctrl: Gtk.EventControllerMotion, x: float, y: float) -> None:
-        hovered = self.canvas.hit_test_filter(x, y)
-        if hovered != self.canvas.hover_filter:
-            self.canvas.hover_filter = hovered
-            self.area.queue_draw()
+        hovered = self.view.hit_test_filter(x, y)
+        if hovered != self.view.hover_filter:
+            self.view.hover_filter = hovered
+            self.view.queue_draw()
 
     def _on_click(self, _gesture: Gtk.GestureClick, _n_press: int, x: float, y: float) -> None:
-        fkey = self.canvas.hit_test_filter(x, y)
+        fkey = self.view.hit_test_filter(x, y)
         if fkey is not None:
-            cur_id = (
-                self.canvas.filtered[self.canvas.selected_idx].get("id")
-                if self.canvas.filtered
-                else None
-            )
-            self.canvas.filter_mode = fkey
-            self.canvas.apply_filter(keep_id=cur_id)
-            self.area.queue_draw()
+            cur_id = self.view.filtered[self.view.selected_idx].get("id") if self.view.filtered else None
+            self.view.filter_mode = fkey
+            self.view.apply_filter(keep_id=cur_id)
             return
 
-        if self.canvas.point_in_capsule(x, y):
+        if self.view.point_in_capsule(x, y):
             return
 
-        hit_slot = self.canvas.hit_test_card(x, y)
+        hit_slot = self.view.hit_test_card(x, y)
         if hit_slot is not None:
-            if hit_slot == self.canvas.target_slot:
+            if hit_slot == self.view.target_slot:
                 self._commit_selected()
             else:
-                self.canvas.target_slot = hit_slot
-                self.area.queue_draw()
+                self.view.jump_to_slot(hit_slot)
             return
 
         self.close()
 
 
-def render_preview_png(out_path: str, width: int = 1920, height: int = 1080) -> int:
-    """Render an offscreen PNG snapshot of the parallelogram overlay for verification."""
+def run_benchmark() -> int:
+    Gtk.init()
     presets, current_id, store_wp_dir = load_data()
     if not presets:
         print("No presets found", file=sys.stderr)
         return 1
-    canvas = ParallelogramCanvas(presets, current_id, store_wp_dir)
-    canvas.anim_alpha = 1.0
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-    ctx = cairo.Context(surface)
-    active_surf = canvas.surfaces.get(current_id)
-    if active_surf is not None:
-        iw, ih = active_surf.get_width(), active_surf.get_height()
-        sc = max(width / iw, height / ih)
-        ctx.save()
-        ctx.translate((width - iw * sc) * 0.5, (height - ih * sc) * 0.5)
-        ctx.scale(sc, sc)
-        ctx.set_source_surface(active_surf, 0, 0)
-        ctx.paint()
-        ctx.restore()
-    else:
-        ctx.set_source_rgb(0.06, 0.08, 0.12)
-        ctx.paint()
-    canvas.draw(ctx, width, height)
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    surface.write_to_png(out_path)
+    t0 = time.perf_counter()
+    view = ParallelogramView(presets, current_id, store_wp_dir)
+    t_load = (time.perf_counter() - t0) * 1000.0
+
+    view.anim_alpha = 1.0
+    view.move_selection(3)
+
+    frames = 240
+    t1 = time.perf_counter()
+    for _ in range(frames):
+        view.step_animation(1.0 / 144.0)
+        snap = Gtk.Snapshot()
+        view.render_snapshot(snap, 1920, 1080)
+        snap.to_node()
+    elapsed_ms = (time.perf_counter() - t1) * 1000.0
+    print(f"startup={t_load:.1f}ms, {frames} GPU scene-graph frames in {elapsed_ms:.1f}ms ({elapsed_ms/frames:.3f}ms/frame)")
     return 0
 
 
 def main() -> int:
-    if len(sys.argv) >= 3 and sys.argv[1] == "--render-preview":
-        w = int(sys.argv[3]) if len(sys.argv) > 3 else 1920
-        h = int(sys.argv[4]) if len(sys.argv) > 4 else 1080
-        return render_preview_png(sys.argv[2], w, h)
+    if len(sys.argv) >= 2 and sys.argv[1] == "--benchmark":
+        return run_benchmark()
 
     presets, current_id, store_wp_dir = load_data()
     if not presets:
         print(f"Файл пресетов не найден или пуст: {PRESETS_FILE}", file=sys.stderr)
         return 1
 
-    canvas = ParallelogramCanvas(presets, current_id, store_wp_dir)
-
-    css_provider = Gtk.CssProvider()
-    css_provider.load_from_data(b"""
-        window.parallelogram-overlay {
-            background-color: transparent;
-            box-shadow: none;
-        }
-    """)
-    display = Gdk.Display.get_default()
-    if display is not None:
-        Gtk.StyleContext.add_provider_for_display(
-            display, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-
     app = Gtk.Application(application_id="dev.spike.ThemeParallelogram")
 
     def on_activate(gtk_app: Gtk.Application) -> None:
-        win = ParallelogramWindow(gtk_app, canvas)
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(b"""
+            window.parallelogram-overlay {
+                background-color: transparent;
+                box-shadow: none;
+            }
+        """)
+        display = Gdk.Display.get_default()
+        if display is not None:
+            Gtk.StyleContext.add_provider_for_display(
+                display, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+        view = ParallelogramView(presets, current_id, store_wp_dir)
+        win = ParallelogramWindow(gtk_app, view)
         win.present()
 
     app.connect("activate", on_activate)
