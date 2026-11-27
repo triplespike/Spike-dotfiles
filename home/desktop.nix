@@ -476,6 +476,98 @@ in {
         };
       };
     };
+    customPalettes.Aperture.dark = {
+      mPrimary = "#5CA8FF";
+      mOnPrimary = "#091124";
+      mSecondary = "#C084FC";
+      mOnSecondary = "#150D26";
+      mTertiary = "#F472B6";
+      mOnTertiary = "#240B1A";
+      mError = "#FB7185";
+      mOnError = "#260910";
+      mSurface = "#0C1226";
+      mOnSurface = "#EEF3FF";
+      mSurfaceVariant = "#141D3B";
+      mOnSurfaceVariant = "#A8B5D9";
+      mOutline = "#3C4C7D";
+      mShadow = "#050814";
+      mHover = "#1F2D59";
+      mOnHover = "#EEF3FF";
+      terminal = {
+        background = "#080D1C";
+        foreground = "#EEF3FF";
+        cursor = "#5CA8FF";
+        cursorText = "#080D1C";
+        selectionBg = "#273A73";
+        selectionFg = "#FFFFFF";
+        normal = {
+          black = "#080D1C";
+          red = "#FB7185";
+          green = "#5EEAD4";
+          yellow = "#FDE047";
+          blue = "#5CA8FF";
+          magenta = "#C084FC";
+          cyan = "#67E8F9";
+          white = "#EEF3FF";
+        };
+        bright = {
+          black = "#3C4C7D";
+          red = "#FDA4AF";
+          green = "#99F6E4";
+          yellow = "#FEF08A";
+          blue = "#93C5FD";
+          magenta = "#D8B4FE";
+          cyan = "#A5F3FC";
+          white = "#FFFFFF";
+        };
+      };
+    };
+    customPalettes.TameImpala.dark = {
+      mPrimary = "#B78CE2";
+      mOnPrimary = "#150D20";
+      mSecondary = "#EF3E5B";
+      mOnSecondary = "#24080F";
+      mTertiary = "#F5A623";
+      mOnTertiary = "#241705";
+      mError = "#FF5370";
+      mOnError = "#260810";
+      mSurface = "#120D1A";
+      mOnSurface = "#F2ECF9";
+      mSurfaceVariant = "#1D1629";
+      mOnSurfaceVariant = "#BFB2D1";
+      mOutline = "#5A4973";
+      mShadow = "#07050B";
+      mHover = "#2E2342";
+      mOnHover = "#F2ECF9";
+      terminal = {
+        background = "#0B0711";
+        foreground = "#F2ECF9";
+        cursor = "#EF3E5B";
+        cursorText = "#0B0711";
+        selectionBg = "#3B2B54";
+        selectionFg = "#FFFFFF";
+        normal = {
+          black = "#0B0711";
+          red = "#EF3E5B";
+          green = "#A7E2A5";
+          yellow = "#F5A623";
+          blue = "#9A86FD";
+          magenta = "#B78CE2";
+          cyan = "#8BE9FD";
+          white = "#E4DCEB";
+        };
+        bright = {
+          black = "#5A4973";
+          red = "#FF6B85";
+          green = "#C1F0BF";
+          yellow = "#FFC45C";
+          blue = "#B5A6FF";
+          magenta = "#CFAEF0";
+          cyan = "#B6F3FF";
+          white = "#FFFFFF";
+        };
+      };
+    };
   };
 
   wayland.windowManager.niri = {

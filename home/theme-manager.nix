@@ -106,6 +106,7 @@ let
     if [ "$WP_TYPE" = "video" ]; then
       WP_PATH="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')")"
       FALLBACK="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')")"
+      FALLBACK_VIDEO="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r --arg id "$TARGET_ID" '.wallpaper.fallback_video // ("~/Spike-dotfiles/assets/wallpapers/" + $id + ".mp4")')")"
 
       stop_wallpapers
       if [ -n "$FALLBACK" ] && [ -f "$FALLBACK" ]; then
@@ -113,6 +114,8 @@ let
       fi
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
         start_video_bg "$WP_PATH" || true
+      elif [ -n "$FALLBACK_VIDEO" ] && [ -f "$FALLBACK_VIDEO" ]; then
+        start_video_bg "$FALLBACK_VIDEO" || true
       elif [ -z "$FALLBACK" ] || [ ! -f "$FALLBACK" ]; then
         echo "Не найден файл обоев для пресета '$TARGET_ID': $WP_PATH" >&2
         WALLPAPER_STARTED=0

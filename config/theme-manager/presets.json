@@ -69,97 +69,6 @@
       }
     },
     {
-      "id": "tokyo-night",
-      "name": "Tokyo Night (Star Bearing Dreams)",
-      "icon": "🌃",
-      "wallpaper": {
-        "type": "wallpaperengine",
-        "id": "3463280673",
-        "screen": "HDMI-A-1",
-        "args": [
-          "--disable-mouse",
-          "--disable-parallax"
-        ],
-        "properties": {
-          "hrbigbgeneralcomponentswitch": "0",
-          "time": "0",
-          "day1": "0",
-          "week1": "0",
-          "newproperty46": "0",
-          "newproperty50": "0",
-          "shu": "0",
-          "newproperty32": "0",
-          "newproperty33": "0",
-          "weekdisplaysize": "0",
-          "newproperty53": "0",
-          "x": "-10",
-          "x1": "-10",
-          "x2": "-10",
-          "y": "-10",
-          "y2": "-10",
-          "y3": "-10"
-        },
-        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/tokyo-night.png"
-      },
-      "noctalia": {
-        "source": "community",
-        "palette": "Tokyo Night Storm"
-      },
-      "niri": {
-        "focus_ring": {
-          "from": "#7aa2f7",
-          "to": "#bb9af7",
-          "angle": 135
-        },
-        "tab_indicator": {
-          "from": "#7aa2f7",
-          "to": "#bb9af7",
-          "angle": 90,
-          "inactive": "#24283b88"
-        },
-        "shadow": "#16161ecc",
-        "overview_backdrop": "#1a1b26dd"
-      },
-      "ghostty": {
-        "background": "1a1b26",
-        "foreground": "c0caf5",
-        "cursor_color": "#c0caf5",
-        "selection_background": "#283457",
-        "selection_foreground": "#c0caf5",
-        "palette": [
-          "0=#15161e",
-          "1=#f7768e",
-          "2=#9ece6a",
-          "3=#e0af68",
-          "4=#7aa2f7",
-          "5=#bb9af7",
-          "6=#7dcfff",
-          "7=#a9b1d6",
-          "8=#414868",
-          "9=#f7768e",
-          "10=#9ece6a",
-          "11=#e0af68",
-          "12=#7aa2f7",
-          "13=#bb9af7",
-          "14=#7dcfff",
-          "15=#c0caf5"
-        ]
-      },
-      "lavat": {
-        "color": "7aa2f7",
-        "rim": "bb9af7"
-      },
-      "cava": {
-        "gradient": [
-          "#7aa2f7",
-          "#7dcfff",
-          "#b4f9f8",
-          "#bb9af7",
-          "#f7768e"
-        ]
-      }
-    },
-    {
       "id": "catppuccin",
       "name": "Catppuccin Mocha (Angled Waves)",
       "icon": "☕",
@@ -244,74 +153,6 @@
           "#89dceb",
           "#cba6f7",
           "#f38ba8"
-        ]
-      }
-    },
-    {
-      "id": "cyberpunk",
-      "name": "Cyberpunk 2077 (Cozy City Loft)",
-      "icon": "⚡",
-      "wallpaper": {
-        "type": "video",
-        "path": "~/Spike-dotfiles/assets/wallpapers/cyberpunk.mp4",
-        "screen": "HDMI-A-1",
-        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/cyberpunk.png"
-      },
-      "noctalia": {
-        "source": "community",
-        "palette": "Cyberpunk"
-      },
-      "niri": {
-        "focus_ring": {
-          "from": "#ff003c",
-          "to": "#fcee0a",
-          "angle": 135
-        },
-        "tab_indicator": {
-          "from": "#ff003c",
-          "to": "#fcee0a",
-          "angle": 90,
-          "inactive": "#20202888"
-        },
-        "shadow": "#000000cc",
-        "overview_backdrop": "#0b0c10dd"
-      },
-      "ghostty": {
-        "background": "0d0d11",
-        "foreground": "ff3355",
-        "cursor_color": "#ff003c",
-        "selection_background": "#ff003c",
-        "selection_foreground": "#0d0d11",
-        "palette": [
-          "0=#101015",
-          "1=#ff003c",
-          "2=#00ff9f",
-          "3=#fcee0a",
-          "4=#ff003c",
-          "5=#ab66cc",
-          "6=#00f0ff",
-          "7=#e8edff",
-          "8=#303040",
-          "9=#ff0055",
-          "10=#20ffa5",
-          "11=#ffe600",
-          "12=#ff2a5f",
-          "13=#d400ff",
-          "14=#00ffff",
-          "15=#ffffff"
-        ]
-      },
-      "lavat": {
-        "color": "ff003c",
-        "rim": "fcee0a"
-      },
-      "cava": {
-        "gradient": [
-          "#00f0ff",
-          "#00ff9f",
-          "#fcee0a",
-          "#ff003c",
-          "#ff0055"
         ]
       }
     },
@@ -519,6 +360,372 @@
           "#ebcb8b",
           "#bf616a",
           "#d08770"
+        ]
+      }
+    },
+    {
+      "id": "aperture",
+      "name": "Aperture GD (Astral Prism)",
+      "icon": "🔭",
+      "wallpaper": {
+        "type": "video",
+        "path": "~/.local/share/Steam/steamapps/workshop/content/431960/3530684049/Aperture.mp4",
+        "screen": "HDMI-A-1",
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/aperture.png",
+        "fallback_video": "~/Spike-dotfiles/assets/wallpapers/aperture.mp4"
+      },
+      "noctalia": {
+        "source": "custom",
+        "palette": "Aperture"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#5CA8FF",
+          "to": "#C084FC",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#5CA8FF",
+          "to": "#C084FC",
+          "angle": 90,
+          "inactive": "#141D3B88"
+        },
+        "shadow": "#050814cc",
+        "overview_backdrop": "#080D1Cdd"
+      },
+      "ghostty": {
+        "background": "080D1C",
+        "foreground": "EEF3FF",
+        "cursor_color": "#5CA8FF",
+        "selection_background": "#273A73",
+        "selection_foreground": "#FFFFFF",
+        "palette": [
+          "0=#080D1C",
+          "1=#FB7185",
+          "2=#5EEAD4",
+          "3=#FDE047",
+          "4=#5CA8FF",
+          "5=#C084FC",
+          "6=#67E8F9",
+          "7=#EEF3FF",
+          "8=#3C4C7D",
+          "9=#FDA4AF",
+          "10=#99F6E4",
+          "11=#FEF08A",
+          "12=#93C5FD",
+          "13=#D8B4FE",
+          "14=#A5F3FC",
+          "15=#FFFFFF"
+        ]
+      },
+      "lavat": {
+        "color": "5CA8FF",
+        "rim": "C084FC"
+      },
+      "cava": {
+        "gradient": [
+          "#5CA8FF",
+          "#67E8F9",
+          "#93C5FD",
+          "#C084FC",
+          "#F472B6"
+        ]
+      }
+    },
+    {
+      "id": "sakura-moon",
+      "name": "Sakura Moon (Magenta Fantasy)",
+      "icon": "🌸",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "3325859447",
+        "screen": "HDMI-A-1",
+        "args": [
+          "--scaling",
+          "fill",
+          "--disable-mouse"
+        ],
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/sakura-moon.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Mizuki-Akiyama"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#e6a6c8",
+          "to": "#afa2d8",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#e6a6c8",
+          "to": "#7fb6d6",
+          "angle": 90,
+          "inactive": "#1d1a2a88"
+        },
+        "shadow": "#05060acc",
+        "overview_backdrop": "#10111bdd"
+      },
+      "ghostty": {
+        "background": "10111b",
+        "foreground": "eee7f0",
+        "cursor_color": "#e6a6c8",
+        "selection_background": "#3b304e",
+        "selection_foreground": "#ffffff",
+        "palette": [
+          "0=#1d1a2a",
+          "1=#f08a9b",
+          "2=#8fd0b8",
+          "3=#d9b874",
+          "4=#7fb6d6",
+          "5=#d8a2cb",
+          "6=#7cced9",
+          "7=#eee7f0",
+          "8=#4d465c",
+          "9=#ff9caf",
+          "10=#a7dec9",
+          "11=#efd08d",
+          "12=#9dcee7",
+          "13=#e6b6d5",
+          "14=#9adde4",
+          "15=#ffffff"
+        ]
+      },
+      "lavat": {
+        "color": "e6a6c8",
+        "rim": "afa2d8"
+      },
+      "cava": {
+        "gradient": [
+          "#7fb6d6",
+          "#afa2d8",
+          "#d8a2cb",
+          "#e6a6c8",
+          "#f08a9b"
+        ]
+      }
+    },
+    {
+      "id": "golden-woods",
+      "name": "Golden Woods (Nature)",
+      "icon": "🌲",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "1350400986",
+        "screen": "HDMI-A-1",
+        "args": [
+          "--scaling",
+          "fill",
+          "--disable-mouse"
+        ],
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/golden-woods.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "Everforest Material"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#A7C080",
+          "to": "#DBBC7F",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#A7C080",
+          "to": "#7FBBB3",
+          "angle": 90,
+          "inactive": "#20202088"
+        },
+        "shadow": "#080808cc",
+        "overview_backdrop": "#161616dd"
+      },
+      "ghostty": {
+        "background": "161616",
+        "foreground": "D3C6AA",
+        "cursor_color": "#DBBC7F",
+        "selection_background": "#414B50",
+        "selection_foreground": "#D3C6AA",
+        "palette": [
+          "0=#202020",
+          "1=#E67E80",
+          "2=#A7C080",
+          "3=#DBBC7F",
+          "4=#7FBBB3",
+          "5=#D699B6",
+          "6=#83C092",
+          "7=#D3C6AA",
+          "8=#414B50",
+          "9=#E69875",
+          "10=#A7C080",
+          "11=#DBBC7F",
+          "12=#7FBBB3",
+          "13=#D699B6",
+          "14=#83C092",
+          "15=#D3C6AA"
+        ]
+      },
+      "lavat": {
+        "color": "A7C080",
+        "rim": "DBBC7F"
+      },
+      "cava": {
+        "gradient": [
+          "#7FBBB3",
+          "#83C092",
+          "#A7C080",
+          "#DBBC7F",
+          "#E69875"
+        ]
+      }
+    },
+    {
+      "id": "messy-night",
+      "name": "Messy Room by Night",
+      "icon": "🖥️",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "1613667090",
+        "screen": "HDMI-A-1",
+        "args": [
+          "--scaling",
+          "fill",
+          "--disable-mouse"
+        ],
+        "properties": {
+          "shooting_stars": "1",
+          "x_ray": "0"
+        },
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/messy-night.png"
+      },
+      "noctalia": {
+        "source": "community",
+        "palette": "One Dark Two"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#62BAC6",
+          "to": "#EAC786",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#62BAC6",
+          "to": "#71B9F4",
+          "angle": 90,
+          "inactive": "#282C3488"
+        },
+        "shadow": "#1D1F23cc",
+        "overview_backdrop": "#21252Bdd"
+      },
+      "ghostty": {
+        "background": "21252B",
+        "foreground": "E6E6E6",
+        "cursor_color": "#78C4CE",
+        "selection_background": "#393E47",
+        "selection_foreground": "#E6E6E6",
+        "palette": [
+          "0=#21252B",
+          "1=#E27881",
+          "2=#98C379",
+          "3=#EAC786",
+          "4=#71B9F4",
+          "5=#C88BDA",
+          "6=#62BAC6",
+          "7=#C9CCD3",
+          "8=#282C34",
+          "9=#E68991",
+          "10=#A8CC8E",
+          "11=#EDCF97",
+          "12=#8DC7F6",
+          "13=#D3A2E2",
+          "14=#78C4CE",
+          "15=#E6E6E6"
+        ]
+      },
+      "lavat": {
+        "color": "62BAC6",
+        "rim": "EAC786"
+      },
+      "cava": {
+        "gradient": [
+          "#71B9F4",
+          "#62BAC6",
+          "#78C4CE",
+          "#98C379",
+          "#EAC786"
+        ]
+      }
+    },
+    {
+      "id": "tame-impala",
+      "name": "Tame Impala (Currents)",
+      "icon": "🪩",
+      "wallpaper": {
+        "type": "wallpaperengine",
+        "id": "1716473796",
+        "screen": "HDMI-A-1",
+        "clamp": "clamp",
+        "args": [
+          "--scaling",
+          "fill",
+          "--disable-mouse"
+        ],
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/tame-impala.png"
+      },
+      "noctalia": {
+        "source": "custom",
+        "palette": "TameImpala"
+      },
+      "niri": {
+        "focus_ring": {
+          "from": "#B78CE2",
+          "to": "#EF3E5B",
+          "angle": 135
+        },
+        "tab_indicator": {
+          "from": "#B78CE2",
+          "to": "#F5A623",
+          "angle": 90,
+          "inactive": "#1D162988"
+        },
+        "shadow": "#07050Bcc",
+        "overview_backdrop": "#0B0711dd"
+      },
+      "ghostty": {
+        "background": "0B0711",
+        "foreground": "F2ECF9",
+        "cursor_color": "#EF3E5B",
+        "selection_background": "#3B2B54",
+        "selection_foreground": "#FFFFFF",
+        "palette": [
+          "0=#0B0711",
+          "1=#EF3E5B",
+          "2=#A7E2A5",
+          "3=#F5A623",
+          "4=#9A86FD",
+          "5=#B78CE2",
+          "6=#8BE9FD",
+          "7=#E4DCEB",
+          "8=#5A4973",
+          "9=#FF6B85",
+          "10=#C1F0BF",
+          "11=#FFC45C",
+          "12=#B5A6FF",
+          "13=#CFAEF0",
+          "14=#B6F3FF",
+          "15=#FFFFFF"
+        ]
+      },
+      "lavat": {
+        "color": "B78CE2",
+        "rim": "EF3E5B"
+      },
+      "cava": {
+        "gradient": [
+          "#9A86FD",
+          "#B78CE2",
+          "#EF3E5B",
+          "#F5A623",
+          "#FFC45C"
         ]
       }
     }

@@ -45,7 +45,7 @@
 ## ✨ Highlights
 
 * **Scrollable Tiling:** Fluid infinite horizontal canvas with dynamic column resizing and gesture physics via [Niri](https://github.com/YaLTeR/niri).
-* **Dynamic Theme Switcher (`Mod + Shift + T`):** Instant on-the-fly theme switching (Nord Aurora, Catppuccin Mocha, Cyberpunk 2077, Medieval Grim, Shardscapes, Nullscapes). Swaps wallpapers, Ghostty terminal palettes, and Noctalia styling synchronously without rebuilds.
+* **Dynamic Theme Switcher (`Mod + Shift + T`):** Instant on-the-fly switching across 10 curated themes (Nullscapes, Catppuccin Mocha, Nord Aurora, Shardscapes, Medieval Grim, Aperture GD, Sakura Moon, Golden Woods, Messy Room by Night, Tame Impala). Swaps wallpapers, Ghostty terminal palettes, and Noctalia styling synchronously without rebuilds.
 * **Packaged Riff Player (`pkgs/riff.nix`):** Custom Nix derivation for [Riff](https://github.com/rootscripts/riff) using `appimageTools`, configured with native Niri acrylic background blur and synchronized karaoke lyrics.
 * **Capsule Blur Patch:** Native C++ blur patch for the [Noctalia](https://github.com/noctalia-dev/noctalia) shell bar applied declaratively via `overrideAttrs`.
 * **Direct Scanout Pipeline:** Tailored window rules for fullscreen applications to enable uninhibited direct scanout with zero compositor overhead.
@@ -104,7 +104,7 @@
 | **Cursor** | Catppuccin Mocha Dark |
 
 > [!NOTE]
-> **Live Wallpapers & Wallpaper Engine:** All 7 system color schemes (Noctalia, Niri, Ghostty, Zen Browser, Cava, Btop, Lava) work completely offline out of the box. Built-in seamless video loops (`catppuccin.mp4`, `cyberpunk.mp4`, `medieval-loop.mp4`) play locally via `ryoku-livewall` on both **NixOS** and **Arch**. The remaining themes (`Nullscapes`, `Shardscapes`, `Tokyo Night`, `Nord Aurora`) reference local **Steam / Wallpaper Engine** Workshop items — if you do not own/install them, `theme-apply` automatically falls back to clean static `.png` wallpapers from `assets/wallpapers/`.
+> **Live Wallpapers & Wallpaper Engine:** All 10 system color schemes (Noctalia, Niri, Ghostty, Zen Browser, Cava, Btop, Lava) work completely offline out of the box. Built-in seamless video loops (`aperture.mp4`, `catppuccin.mp4`, `medieval-loop.mp4`) play locally via `ryoku-livewall` on both **NixOS** and **Arch**. The remaining themes (`Nullscapes`, `Shardscapes`, `Nord Aurora`, `Sakura Moon`, `Golden Woods`, `Messy Room by Night`, `Tame Impala`) reference local **Steam / Wallpaper Engine** Workshop items — if you do not own/install them, `theme-apply` automatically falls back to clean 1080p `.png` wallpapers from `assets/wallpapers/`.
 
 ---
 
@@ -173,7 +173,7 @@ sudo nixos-rebuild test --flake .#nixos
 
 ## 🐧 Quick Start for Arch Linux / CachyOS / EndeavourOS
 
-A standalone, zero-Nix portable installer is bundled in [`arch/`](arch/README.md) — it installs Niri, Noctalia (with all 7 offline palettes), dark GTK + Qt/Dolphin (`BreezeDark`), Polkit + NTFS mounting, Gwenview/mpv defaults, Zen Browser live-theme setup, and compiles `ryoku-livewall` automatically (while backing up your existing `~/.config` files):
+A standalone, zero-Nix portable installer is bundled in [`arch/`](arch/README.md) — it installs Niri, Noctalia (with all 10 offline palettes), dark GTK + Qt/Dolphin (`BreezeDark`), Polkit + NTFS mounting, Gwenview/mpv defaults, Zen Browser live-theme setup, and compiles `ryoku-livewall` automatically (while backing up your existing `~/.config` files):
 
 ### 1. Full install (packages + configs + `ryoku-livewall`)
 ```bash
