@@ -186,7 +186,8 @@
           "clock": "0",
           "date": "0"
         },
-        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/catppuccin.png"
+        "fallback_image": "~/Spike-dotfiles/assets/wallpapers/catppuccin.png",
+        "fallback_video": "~/Spike-dotfiles/assets/wallpapers/catppuccin.mp4"
       },
       "noctalia": {
         "source": "community",

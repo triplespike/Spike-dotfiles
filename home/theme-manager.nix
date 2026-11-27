@@ -84,6 +84,24 @@ let
       ${pkgs.coreutils}/bin/sleep 0.1
     }
 
+    start_video_bg() {
+      local vid="$1"
+      [ -n "$vid" ] && [ -f "$vid" ] || return 1
+      systemd-run --user --collect --unit=theme-wallpaper-video \
+        ${livewall}/bin/ryoku-livewall "$vid" 1920 fill "$SCREEN" >/dev/null || true
+      ${pkgs.coreutils}/bin/sleep 0.4
+      if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
+        systemd-run --user --collect --unit=theme-wallpaper-video \
+          ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=auto-safe" "$SCREEN" "$vid" >/dev/null || true
+        ${pkgs.coreutils}/bin/sleep 0.4
+        if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
+          echo "Не удалось запустить видеообои: $vid (оставлен fallback_image)" >&2
+          return 1
+        fi
+      fi
+      return 0
+    }
+
     WALLPAPER_STARTED=1
     if [ "$WP_TYPE" = "video" ]; then
       WP_PATH="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.path // ""')")"
@@ -94,17 +112,7 @@ let
         noctalia msg wallpaper-set "$FALLBACK" >/dev/null 2>&1 || true
       fi
       if [ -n "$WP_PATH" ] && [ -f "$WP_PATH" ]; then
-        systemd-run --user --collect --unit=theme-wallpaper-video \
-          ${livewall}/bin/ryoku-livewall "$WP_PATH" 1920 fill "$SCREEN" >/dev/null || true
-        ${pkgs.coreutils}/bin/sleep 0.4
-        if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
-          systemd-run --user --collect --unit=theme-wallpaper-video \
-            ${pkgs.mpvpaper}/bin/mpvpaper -p -l background -o "no-audio loop hwdec=auto-safe" "$SCREEN" "$WP_PATH" >/dev/null || true
-          ${pkgs.coreutils}/bin/sleep 0.4
-          if ! systemctl --user is-active --quiet theme-wallpaper-video.service; then
-            echo "Не удалось запустить видеообои: $WP_PATH (оставлен fallback_image)" >&2
-          fi
-        fi
+        start_video_bg "$WP_PATH" || true
       elif [ -z "$FALLBACK" ] || [ ! -f "$FALLBACK" ]; then
         echo "Не найден файл обоев для пресета '$TARGET_ID': $WP_PATH" >&2
         WALLPAPER_STARTED=0
@@ -112,6 +120,7 @@ let
     elif [ "$WP_TYPE" = "wallpaperengine" ]; then
       WE_ID="$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.id // .wallpaper.workshop_id // ""')"
       FALLBACK="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r '.wallpaper.fallback_image // ""')")"
+      FALLBACK_VIDEO="$(resolve_wp_path "$(echo "$PRESET" | ${pkgs.jq}/bin/jq -r --arg id "$TARGET_ID" '.wallpaper.fallback_video // ("~/Spike-dotfiles/assets/wallpapers/" + $id + ".mp4")')")"
 
       WE_TARGET=""
       if [ -n "$WE_ID" ]; then
@@ -154,8 +163,11 @@ let
           linux-wallpaperengine --fps 60 --layer background --screen-root "$SCREEN" --bg "$WE_TARGET" --volume 0 --silent --no-audio-processing --noautomute "''${EXTRA_WE_ARGS[@]}" >/dev/null || true
         ${pkgs.coreutils}/bin/sleep 0.6
         if ! systemctl --user is-active --quiet theme-wallpaper-engine.service; then
-          echo "Wallpaper Engine не запустился для '$TARGET_ID', оставлен fallback_image." >&2
+          echo "Wallpaper Engine не запустился для '$TARGET_ID', пробую fallback." >&2
+          [ -f "$FALLBACK_VIDEO" ] && start_video_bg "$FALLBACK_VIDEO" || true
         fi
+      elif [ -n "$FALLBACK_VIDEO" ] && [ -f "$FALLBACK_VIDEO" ]; then
+        start_video_bg "$FALLBACK_VIDEO" || true
       elif [ -z "$FALLBACK" ] || [ ! -f "$FALLBACK" ]; then
         echo "Сцена Wallpaper Engine '$WE_ID' и fallback_image не найдены для '$TARGET_ID'" >&2
         WALLPAPER_STARTED=0
