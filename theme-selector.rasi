@@ -62,8 +62,10 @@ entry {
 }
 
 listview {
-    layout:        horizontal;
-    lines:         5;
+    flow:          horizontal;
+    columns:       5;
+    lines:         1;
+    fixed-height:  true;
     fixed-columns: true;
     spacing:       14px;
     cycle:         true;
