@@ -425,9 +425,14 @@ EOF
     pkgs.gobject-introspection
   ];
 
+  themeThumbnails = pkgs.writeShellScriptBin "theme-thumbnails" ''
+    export STORE_WP_DIR="''${STORE_WP_DIR:-${../assets/wallpapers}}"
+    exec ${themePython}/bin/python3 ${../scripts/theme-thumbnails.py} "$@"
+  '';
+
   themeMenu = pkgs.writeShellScriptBin "theme-menu" ''
     set -euo pipefail
-    export PATH="${themeApply}/bin:${pkgs.rofi}/bin:${pkgs.jq}/bin:$PATH"
+    export PATH="${themeApply}/bin:${themeThumbnails}/bin:${pkgs.rofi}/bin:${pkgs.jq}/bin:$PATH"
 
     # Поддержка явного запуска оригинального GTK4/Adwaita интерфейса через --gui / --adw
     if [ "''${1:-}" = "--gui" ] || [ "''${1:-}" = "--adw" ]; then
@@ -453,11 +458,17 @@ EOF
     STATE_FILE="$HOME/.local/state/theme-manager/current"
     CURRENT_ID=""
     if [ -f "$STATE_FILE" ]; then
-      CURRENT_ID="$(${pkgs.coreutils}/bin/cat "$STATE_FILE" 2>/dev/null | tr -d '\r\n' || true)"
+      CURRENT_ID="$(${pkgs.coreutils}/bin/cat "$STATE_FILE" 2>/dev/null | tr -d ' \r\n' || true)"
     fi
 
     CACHE_DIR="$HOME/.cache/theme-manager/thumbnails"
     mkdir -p "$CACHE_DIR"
+    STORE_WP_DIR="${../assets/wallpapers}"
+    STORE_WP_DIR="$STORE_WP_DIR" theme-thumbnails >/dev/null 2>&1 || true
+
+    if [ ! -f "$HOME/.config/rofi/theme-colors.rasi" ]; then
+      ${themeInjectApps}/bin/theme-inject-apps "$CURRENT_ID" >/dev/null 2>&1 || true
+    fi
 
     THEME_RASI="$HOME/.config/rofi/theme-selector.rasi"
     if [ ! -f "$THEME_RASI" ]; then
@@ -481,7 +492,8 @@ EOF
       -i
       -show-icons
       -format "i"
-      -p "󰔎 Темы"
+      -p "󰏘  Темы"
+      -mesg "← → листать  •  Enter применить  •  Esc закрыть"
       -theme "$THEME_RASI"
     )
 
@@ -489,11 +501,10 @@ EOF
       ROFI_ARGS+=(-selected-row "$ACTIVE_INDEX" -a "$ACTIVE_INDEX")
     fi
 
-    STORE_WP_DIR="${../assets/wallpapers}"
     CHOSEN_INDEX="$(
       while IFS=$'\t' read -r id name icon fallback; do
         fallback="''${fallback/#\~/$HOME}"
-        thumb="$CACHE_DIR/''${id}.jpg"
+        thumb="$CACHE_DIR/''${id}.png"
         if [ ! -f "$thumb" ]; then
           if [ -n "$fallback" ] && [ -f "$fallback" ]; then
             thumb="$fallback"
@@ -502,7 +513,9 @@ EOF
             [ -f "$STORE_WP_DIR/$base" ] && thumb="$STORE_WP_DIR/$base"
           fi
         fi
-        printf '%s  %s\0icon\x1f%s\n' "$icon" "$name" "$thumb"
+        label="$name"
+        [ "$id" = "$CURRENT_ID" ] && label="$name  ✦"
+        printf '%s\0icon\x1f%s\n' "$label" "$thumb"
       done < <(${pkgs.jq}/bin/jq -r '.presets[] | [ .id, .name, .icon, (.wallpaper.fallback_image // .wallpaper.path // "") ] | @tsv' "$PRESETS_FILE") | ${pkgs.rofi}/bin/rofi "''${ROFI_ARGS[@]}" || true
     )"
 
@@ -638,15 +651,17 @@ in {
     themeMenu
     themeRestore
     themeLava
+    themeThumbnails
     themeInjectApps
     lavat
   ];
 
   # Инициализируем стартовые файлы на чистой системе (не перезаписывая существующие)
-  # + обновляем динамические цвета Vesktop, VSCode, Firefox и Zen при активации
+  # + обновляем динамические цвета Vesktop, VSCode, Firefox, Rofi и Zen при активации
   home.activation.initAppThemeColors = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     run ${pkgs.coreutils}/bin/mkdir -p \
       "$HOME/.config/niri" \
+      "$HOME/.config/rofi" \
       "$HOME/.config/theme-manager" \
       "$HOME/.config/ghostty" \
       "$HOME/.config/fastfetch" \
@@ -672,6 +687,7 @@ in {
     done
 
     run ${themeInjectApps}/bin/theme-inject-apps || true
+    run ${themeThumbnails}/bin/theme-thumbnails || true
     run ${pkgs.coreutils}/bin/env ZEN_NEWTAB_TEMPLATE="${../zen-newtab/index.html}" ${pkgs.python3}/bin/python3 ${../scripts/theme-inject-zen.py} || true
   '';
 

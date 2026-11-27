@@ -45,7 +45,7 @@ PACMAN_PKGS=(
   grim slurp wl-clipboard cliphist swaybg hyprpicker
   tesseract tesseract-data-eng tesseract-data-rus zbar ffmpeg libnotify
   btop cava bat eza zoxide fzf yazi satty
-  python python-gobject gtk4 libadwaita xdg-utils
+  python python-gobject python-pillow gtk4 libadwaita xdg-utils
   ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
   base-devel pkgconf wayland wayland-protocols
 )
@@ -174,6 +174,7 @@ for f in color-pick discord-compress ocr-grab qr-scan songrec-grab obs-control; 
   install -m 0755 "$REPO_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
 install -m 0755 "$REPO_DIR/scripts/theme-menu-gui.py"      "$HOME/.local/bin/theme-menu-gui"
+install -m 0755 "$REPO_DIR/scripts/theme-thumbnails.py"    "$HOME/.local/bin/theme-thumbnails"
 install -m 0755 "$REPO_DIR/scripts/theme-inject-zen.py"    "$HOME/.local/bin/theme-inject-zen"
 install -m 0755 "$REPO_DIR/scripts/theme-inject-apps.py"   "$HOME/.local/bin/theme-inject-apps"
 install -m 0755 "$REPO_DIR/scripts/theme-zen-bridge.py"    "$HOME/.local/bin/theme-zen-bridge"
@@ -234,6 +235,7 @@ done
 export PATH="$HOME/.local/bin:$PATH"
 ZEN_NEWTAB_TEMPLATE="$REPO_DIR/zen-newtab/index.html" theme-inject-zen >/dev/null 2>&1 || true
 theme-inject-apps >/dev/null 2>&1 || true
+STORE_WP_DIR="$REPO_DIR/assets/wallpapers" theme-thumbnails >/dev/null 2>&1 || true
 
 # Собираем лёгкий нативный видео-плеер обоев ryoku-livewall
 if command -v gcc >/dev/null 2>&1 && command -v wayland-scanner >/dev/null 2>&1 && command -v pkg-config >/dev/null 2>&1; then

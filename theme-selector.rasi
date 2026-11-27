@@ -1,87 +1,91 @@
 configuration {
     modi: "dmenu";
     show-icons: true;
-    font: "FiraCode Nerd Font 10";
+    font: "JetBrainsMono Nerd Font 10";
 }
 
+/* Fallback defaults (Nullscapes) before dynamic @import */
 * {
-    bg-base:      #0d111ad9;
-    bg-surface:   #151b26f2;
-    bg-card:      #1a2230;
-    bg-selected:  #253248;
-    border-col:   #2c394f;
-    border-focus: #678fe4;
-    fg-main:      #e2e8f0;
-    fg-sub:       #94a3b8;
-    accent:       #678fe4;
-    accent-peach: #ff8a3d;
+    bg-base:      #080B16DE;
+    bg-surface:   #141B29E6;
+    bg-card:      #1B2437B8;
+    bg-selected:  #3D5994F2;
+    border-col:   #454F6B88;
+    border-focus: #678FE4;
+    fg-main:      #E8EDFF;
+    fg-sub:       #AFB1B6;
+    accent:       #678FE4;
+    accent-alt:   #AB66CC;
 
     background-color: transparent;
     text-color:       @fg-main;
 }
 
+@import "~/.config/rofi/theme-colors.rasi"
+
 window {
     transparency:     "real";
-    width:            880px;
-    height:           520px;
+    location:         center;
+    anchor:           center;
+    width:            82%;
     border:           2px;
     border-color:     @border-focus;
-    border-radius:    16px;
+    border-radius:    20px;
     background-color: @bg-base;
-    padding:          18px;
+    padding:          20px;
 }
 
 mainbox {
-    spacing:          14px;
-    children:         [ inputbar, listview ];
+    spacing:          16px;
+    children:         [ inputbar, listview, message ];
 }
 
 inputbar {
-    spacing:          10px;
-    padding:          8px 14px;
+    spacing:          12px;
+    padding:          10px 16px;
     border:           1px;
     border-color:     @border-col;
-    border-radius:    10px;
+    border-radius:    12px;
     background-color: @bg-surface;
     children:         [ prompt, entry ];
 }
 
 prompt {
     text-color:       @accent;
-    font:             "FiraCode Nerd Font Bold 11";
+    font:             "JetBrainsMono Nerd Font Bold 11";
 }
 
 entry {
-    placeholder:       "Поиск темы оформления...";
+    placeholder:       "Поиск темы...";
     placeholder-color: @fg-sub;
     text-color:        @fg-main;
 }
 
 listview {
-    columns:       4;
-    lines:         2;
-    spacing:       12px;
+    layout:        horizontal;
+    lines:         5;
+    fixed-columns: true;
+    spacing:       14px;
     cycle:         true;
-    dynamic:       true;
+    dynamic:       false;
     scrollbar:     false;
 }
 
 element {
     orientation:      vertical;
-    spacing:          8px;
-    padding:          10px;
+    spacing:          6px;
+    padding:          12px 10px 14px 10px;
     border:           1px;
     border-color:     @border-col;
-    border-radius:    12px;
+    border-radius:    16px;
     background-color: @bg-card;
     cursor:           pointer;
 }
 
 element-icon {
-    size:             110px;
+    size:             220px;
     horizontal-align: 0.5;
     vertical-align:   0.5;
-    border-radius:    8px;
     cursor:           pointer;
 }
 
@@ -89,24 +93,38 @@ element-text {
     horizontal-align: 0.5;
     vertical-align:   0.5;
     text-color:       inherit;
-    font:             "FiraCode Nerd Font Medium 10";
+    font:             "JetBrainsMono Nerd Font SemiBold 10";
     cursor:           pointer;
 }
 
 element selected.normal {
     background-color: @bg-selected;
+    border:           2px;
     border-color:     @border-focus;
-    text-color:       #ffffff;
+    text-color:       #FFFFFF;
 }
 
 element normal.active {
-    border-color:     @accent-peach;
-    background-color: #241c1b;
-    text-color:       #ffb078;
+    border:           2px;
+    border-color:     @accent-alt;
+    background-color: @bg-surface;
+    text-color:       @accent-alt;
 }
 
 element selected.active {
-    background-color: #38241d;
-    border-color:     @accent-peach;
-    text-color:       #ffc9a8;
+    background-color: @bg-selected;
+    border:           2px;
+    border-color:     @accent-alt;
+    text-color:       #FFFFFF;
+}
+
+message {
+    padding:          2px 0px 0px 0px;
+    border:           0px;
+}
+
+textbox {
+    horizontal-align: 0.5;
+    text-color:       @fg-sub;
+    font:             "JetBrainsMono Nerd Font 9";
 }

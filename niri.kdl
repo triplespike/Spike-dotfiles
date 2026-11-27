@@ -219,6 +219,15 @@
           place-within-backdrop true
       }
 
+      // Мягкое матовое стекло за Rofi-каруселью тем
+      layer-rule {
+          match namespace="^rofi$"
+          background-effect {
+              blur true
+              xray false
+          }
+      }
+
       // Закругление углов для всех окон (16px под стиль капсул)
       // draw-border-with-background false предотвращает отрисовку рамки/градиента сплошной плашкой позади полупрозрачных окон
       window-rule {

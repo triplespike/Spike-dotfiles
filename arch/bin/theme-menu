@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Меню выбора темы (Rofi по умолчанию, GTK4/Libadwaita по --gui)
+# Меню выбора темы (горизонтальная карусель Rofi по умолчанию, GTK4/Libadwaita по --gui)
 set -euo pipefail
 
 export PATH="$HOME/.local/bin:$PATH"
@@ -17,9 +17,17 @@ STATE_FILE="$HOME/.local/state/theme-manager/current"
 CURRENT_ID=""
 [ -f "$STATE_FILE" ] && CURRENT_ID="$(tr -d ' \n\r' < "$STATE_FILE")"
 
+CACHE_DIR="$HOME/.cache/theme-manager/thumbnails"
+mkdir -p "$CACHE_DIR"
+command -v theme-thumbnails >/dev/null 2>&1 && theme-thumbnails >/dev/null 2>&1 || true
+
+if [ ! -f "$HOME/.config/rofi/theme-colors.rasi" ] && command -v theme-inject-apps >/dev/null 2>&1; then
+  theme-inject-apps "$CURRENT_ID" >/dev/null 2>&1 || true
+fi
+
 ROFI_ARGS=(
   -dmenu -i -show-icons -p "󰏘  Темы"
-  -mesg "Enter — применить  •  Esc — закрыть"
+  -mesg "← → листать  •  Enter применить  •  Esc закрыть"
   -format "i"
 )
 [ -f "$HOME/.config/rofi/theme-selector.rasi" ] && ROFI_ARGS+=(-theme "$HOME/.config/rofi/theme-selector.rasi")
@@ -38,10 +46,12 @@ done < <(jq -r '.presets[] | [ .id, .name, .icon, (.wallpaper.fallback_image // 
 SELECTED_IDX="$(
   while IFS=$'\t' read -r id name icon img; do
     img="${img/#\~/$HOME}"
+    thumb="$CACHE_DIR/${id}.png"
+    [ -f "$thumb" ] || thumb="$img"
     label="$name"
     [ "$id" = "$CURRENT_ID" ] && label="$name  ✦"
-    if [ -n "$img" ] && [ -f "$img" ]; then
-      printf '%s\0icon\x1f%s\n' "$label" "$img"
+    if [ -n "$thumb" ] && [ -f "$thumb" ]; then
+      printf '%s\0icon\x1f%s\n' "$label" "$thumb"
     else
       printf '%s\n' "$label"
     fi
